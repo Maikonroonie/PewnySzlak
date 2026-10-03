@@ -1,0 +1,29 @@
+{
+  "name": "pewnyszlak",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev:api": "npm run dev --workspace=@pewnyszlak/api",
+    "dev:web": "npm run web --workspace=@pewnyszlak/mobile",
+    "dev:mobile": "npm run start --workspace=@pewnyszlak/mobile",
+    "test": "npm run test --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build:web": "npm run export:web --workspace=@pewnyszlak/mobile",
+    "android": "npm run android --workspace=@pewnyszlak/mobile",
+    "sync": "npm run sync --workspace=@pewnyszlak/api",
+    "test:e2e": "playwright test",
+    "test:e2e:report": "playwright show-report"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.63.0",
+    "serve": "^14.2.6"
+  }
+}

@@ -1,0 +1,17 @@
+node_modules/
+.env
+.env.*.local
+.expo/
+dist/
+coverage/
+playwright-report/
+test-results/
+data/
+*.log
+__pycache__/
+.pytest_cache/
+.venv/
+apps/mobile/android/
+apps/mobile/ios/
+!**/.env.example
+apps/mobile/public/maplibre/

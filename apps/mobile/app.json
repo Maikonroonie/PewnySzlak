@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "PewnySzlak",
+    "slug": "pewnyszlak",
+    "scheme": "pewnyszlak",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": { "bundleIdentifier": "pl.pewnyszlak.app", "supportsTablet": true },
+    "android": { "package": "pl.pewnyszlak.app" },
+    "web": { "bundler": "metro", "output": "single", "name": "PewnySzlak — Kraków w Twoim tempie" },
+    "plugins": [
+      "expo-router",
+      "@maplibre/maplibre-react-native",
+      ["expo-location", { "locationWhenInUsePermission": "Twoja pozycja pozwala ustawić początek trasy i prowadzić Cię, gdy aplikacja jest otwarta." }]
+    ],
+    "experiments": { "typedRoutes": true }
+  }
+}

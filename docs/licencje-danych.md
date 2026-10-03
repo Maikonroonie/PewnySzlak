@@ -1,0 +1,22 @@
+# Rejestr źródeł danych i licencji
+
+Każde źródło w aplikacji ma wpis w `apps/api/src/sources/status.ts` (`SOURCE_META`) – pola `licence` i `updateFrequency` są zwracane przez `GET /v1/sources` i pokazywane w aplikacji na ekranie „Źródła danych”. Poniżej pełny rejestr z warunkami użycia.
+
+| Źródło | Co pobieramy | Sposób dostępu | Licencja / warunki | Wymagana atrybucja | Odświeżanie | Przechowujemy |
+|---|---|---|---|---|---|---|
+| **OpenStreetMap** (wyciąg Geofabrik `malopolskie-latest.osm.pbf`) | Sieć pieszą (chodniki, przejścia, schody, windy, krawężniki, bariery), adresy, nazwy miejsc, granica Krakowa (relacja 449696) | Pobranie pliku PBF, import `services/importer/import_osm.py` | **ODbL 1.0** – baza pochodna (graf) również na ODbL; udostępnianie publiczne wymaga podania źródła i licencji | „© autorzy OpenStreetMap” + link do licencji – w aplikacji na ekranie Źródła i pod mapą | Tygodniowo (`SYNC_OSM_CRON`), wersjonowane importy | Graf w PostGIS z `osm_version`, `osm_timestamp` każdego obiektu |
+| **OpenFreeMap** (styl `liberty`, kafelki wektorowe OpenMapTiles) | Mapa podkładowa (wyłącznie wyświetlanie) | HTTPS, na bieżąco dla oglądanego obszaru | Kafelki: dane OSM (ODbL), schemat OpenMapTiles (BSD/CC-BY); OpenFreeMap – usługa publiczna bez klucza, bez gwarancji SLA; **zakaz masowego pobierania** | „© OpenFreeMap · © OpenMapTiles · © autorzy OpenStreetMap” – stały tekst pod mapą (`MAP_ATTRIBUTION`) | Online | Nie – brak cache poza przeglądarką/SDK |
+| **z-dykty.pl – MCP `przetargi`** (Biuletyn Zamówień Publicznych) | Ogłoszenia o zamówieniach dla gminy Kraków (kod 1261011): tytuł, zamawiający, daty, adres URL | MCP (JSON-RPC przez HTTP), paginacja kursorem | **CC BY 4.0** (z-dykty.pl, zgodnie z opisem serwera MCP); dane źródłowe BZP/eZamówienia – informacja publiczna; bez klucza | Link do ogłoszenia w `sourceUrl` każdego sygnału | Codziennie (`SYNC_SOURCES_CRON`) | Tabela `tender_signals`; w barierach jako status `signal` |
+| **NFZ – Informator o Terminach Leczenia (API ITL)** | Placówki dla świadczenia (domyślnie „PORADNIA REHABILITACYJNA”), woj. 06: nazwa, adres, telefon, współrzędne, deklaracje udogodnień (podjazd, toaleta, winda, parking) | REST `https://api.nfz.gov.pl/app-itl-api` | Otwarte dane publiczne NFZ (ponowne wykorzystywanie ISP); bez klucza | Nazwa źródła i data pobrania; deklaracje oznaczone jako **„Deklaracja świadczeniodawcy”**, nigdy jako fakt sprawdzony | Codziennie | Tabela `facilities` (+ `coords_valid`, `coords_check`) |
+| **psoz.pl – MCP `szukaj`** | Strona placówki (pageUrl) powiązana nazwą świadczeniodawcy | MCP przez HTTP | Serwis zewnętrzny, bez klucza; wykorzystujemy wyłącznie identyfikator/URL strony | Link w `psozUrl` | Codziennie | Pole `psoz_url` w `facilities` |
+| **Zgłoszenia społeczności** | Bariery zgłaszane w aplikacji (typ, tytuł, opis, położenie, odcinki), potwierdzenia/zaprzeczenia | Formularz w aplikacji → `POST /v1/barriers` | Dane własne projektu; użytkownik anonimowy (losowy identyfikator instalacji, przechowywany jako skrót SHA-256). Zgłaszający akceptuje publikację treści | — | Na bieżąco (warstwa barier odświeżana co 60 s) | Tabele `barriers`, `barrier_evidence`, `barrier_feedback` |
+| **Korekty operatora** | Weryfikacje, zmiany stanu, usunięcia | CLI `npm run operator` / HTTP z tokenem | Dane własne | — | Ręcznie | `operator_log` + dowody `verified` |
+| **Dane demonstracyjne** | 5 scenariuszy barier (remont Grodzkiej, sporny krawężnik, nieaktualne zgłoszenie windy, sygnał z przetargu, bariera usunięta) | `npm run demo:seed` | Dane własne, oznaczone `is_demo` | Odznaka „DEMO” w aplikacji | Statyczne | Te same tabele, flaga `is_demo`; nigdy w trybie „Dane bieżące” |
+
+## Zasady
+
+- Nie używamy żadnych płatnych kluczy ani usług wymagających rejestracji. Klucz OpenAI (opcjonalny asystent) jest wyłącznie po stronie serwera.
+- Daty w aplikacji rozróżniają: zmianę w źródle (`updatedAt`, np. edycja OSM), pobranie (`fetchedAt`) i obserwację w terenie (`observedAt`). Data edycji OSM ani data aktualizacji kolejki NFZ **nie** są przedstawiane jako data sprawdzenia dostępności.
+- Potwierdzenia użytkowników nigdy nie dają statusu `verified` – ten nadaje wyłącznie operator.
+- Dane o położeniu użytkownika (GPS) nie są zapisywane ani po stronie klienta (poza bieżącą sesją), ani po stronie serwera (żądanie trasy nie jest logowane z treścią).
+- Przy publicznym wdrożeniu należy opublikować tę tabelę (lub jej odpowiednik) jako stronę „Źródła i licencje” oraz zachować atrybucje w aplikacji.
