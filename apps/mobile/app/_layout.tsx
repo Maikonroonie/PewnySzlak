@@ -38,9 +38,9 @@ export default function RootLayout() {
                 headerTitle: ({ children }) => <Text style={{ fontSize: 18, fontWeight: '700', color: colors.text }}>{children}</Text>,
               }}
             >
-              <Stack.Screen name="index" options={{ title: 'PewnySzlak' }} />
+              <Stack.Screen name="index" options={{ title: 'PewnySzlak', headerShown: false }} />
               <Stack.Screen name="preferences" options={{ title: 'Moje preferencje' }} />
-              <Stack.Screen name="route/index" options={{ title: 'Trasa' }} />
+              <Stack.Screen name="route/index" options={{ title: 'Trasa', headerShown: false }} />
               <Stack.Screen name="route/text" options={{ title: 'Trasa – widok tekstowy' }} />
               <Stack.Screen name="route/guide" options={{ title: 'Prowadzenie' }} />
               <Stack.Screen name="route/segment/[id]" options={{ title: 'Szczegóły odcinka' }} />

@@ -1,0 +1,51 @@
+import { expect, test } from '@playwright/test';
+import { axeCheck, choosePlace } from './helpers';
+
+test('editorial desktop, real route, 3D preview play/pause/seek and reduced motion', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1040 });
+  const errors: string[] = [];
+  page.on('pageerror', e => errors.push(e.message));
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Dokąd chcesz dojść?' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Przełącz mapę na 2D' })).toBeVisible();
+  await axeCheck(page, 'editorial-desktop');
+  await page.screenshot({ path: 'docs/screens/08-redesign-desktop.png' });
+  await choosePlace(page, 'Początek trasy', 'Rynek Główny 1', /Rynek Główny 1/);
+  await choosePlace(page, 'Cel', 'Wawel', /Wawel/);
+  await page.getByTestId('plan-route').click();
+  await expect(page.getByTestId('screen-route')).toBeVisible({ timeout: 30_000 });
+  await page.getByTestId('preview-play').click();
+  await expect(page.getByRole('button', { name: 'Wstrzymaj przelot' })).toBeVisible();
+  await expect.poll(async () => Number(await page.getByRole('progressbar', { name: 'Postęp podglądu trasy' }).getAttribute('aria-valuenow'))).toBeGreaterThan(2);
+  await page.getByRole('button', { name: 'Wstrzymaj przelot' }).click();
+  const progress = await page.getByRole('progressbar', { name: 'Postęp podglądu trasy' }).getAttribute('aria-valuenow');
+  await page.getByRole('button', { name: 'Dalej 10%' }).click();
+  await expect.poll(async () => Number(await page.getByRole('progressbar', { name: 'Postęp podglądu trasy' }).getAttribute('aria-valuenow'))).toBeGreaterThan(Number(progress));
+  await page.getByRole('button', { name: /Pokaż etap 1:/ }).click();
+  await axeCheck(page, 'route-preview');
+  await page.screenshot({ path: 'docs/screens/09-route-3d-desktop.png' });
+  await page.getByRole('button', { name: 'Przełącz mapę na 2D' }).click();
+  await expect(page.getByRole('button', { name: 'Przełącz mapę na 3D' })).toBeVisible();
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await expect(page.getByTestId('preview-play')).toBeDisabled();
+  await page.getByRole('button', { name: 'Cała trasa' }).click();
+  await expect(page.getByRole('progressbar', { name: 'Postęp podglądu trasy' })).toHaveAttribute('aria-valuenow', '0');
+  expect(errors).toEqual([]);
+});
+
+test('phone layout has no horizontal overflow and preserves full text route', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await expect(page.getByRole('heading', { name: 'Dokąd chcesz dojść?' })).toBeVisible();
+  await page.screenshot({ path: 'docs/screens/10-redesign-mobile.png' });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await choosePlace(page, 'Początek trasy', 'Rynek Główny 1', /Rynek Główny 1/);
+  await choosePlace(page, 'Cel', 'Wawel', /Wawel/);
+  await page.getByTestId('plan-route').click();
+  await expect(page.getByTestId('screen-route')).toBeVisible({ timeout: 30_000 });
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  await page.screenshot({ path: 'docs/screens/11-route-3d-mobile.png' });
+  await page.getByTestId('open-text-view').click();
+  await expect(page.getByRole('heading', { name: 'Trasa krok po kroku' })).toBeVisible();
+  await axeCheck(page, 'redesign-mobile-text');
+});

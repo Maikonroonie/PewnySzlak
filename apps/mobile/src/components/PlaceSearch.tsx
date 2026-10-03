@@ -75,7 +75,7 @@ export function PlaceSearch({ label, value, onChange, near, allowMyLocation, onP
       <Text nativeID={`${nativeID}-label`} style={styles.label}>{label}</Text>
       {value ? (
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing(1), flexWrap: 'wrap' }}>
-          <View style={{ flex: 1, minWidth: 180, borderWidth: 2, borderColor: colors.ok, borderRadius: 10, padding: spacing(1.25), backgroundColor: colors.surface }}>
+          <View style={{ flex: 1, minWidth: 140, borderWidth: 1, borderColor: colors.border, borderRadius: 16, padding: spacing(1.25), backgroundColor: colors.surface }}>
             <Text style={styles.p}>{value.label}</Text>
           </View>
           <Button title="Zmień" variant="secondary" accessibilityLabel={`Zmień: ${label}`} onPress={() => { onChange(null); setOpen(true); }} />

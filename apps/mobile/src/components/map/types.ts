@@ -1,3 +1,4 @@
+import { segmentDifficulty } from '../../lib/route-preview';
 import type { Barrier, Coordinate, RouteResult } from '@pewnyszlak/domain';
 
 export const MAP_STYLE_URL = process.env.EXPO_PUBLIC_MAP_STYLE_URL ?? 'https://tiles.openfreemap.org/styles/liberty';
@@ -14,6 +15,10 @@ export type MapProps = {
   center?: Coordinate;
   zoom?: number;
   heading?: number | null;
+  previewPlaying?: boolean;
+  previewProgress?: number | null;
+  selectedSegmentId?: string | null;
+  onInteract?: () => void;
   follow?: boolean;
   reduceMotion?: boolean;
   onPress?: (c: Coordinate) => void;
@@ -31,7 +36,7 @@ export function routeFeatures(route: RouteResult): GeoJSON.FeatureCollection {
     features: route.segments.map((s) => ({
       type: 'Feature',
       id: s.id,
-      properties: { segmentId: s.id, uncertain: s.uncertain, kind: s.kind, name: s.name },
+      properties: { segmentId: s.id, uncertain: s.uncertain, difficult: segmentDifficulty(s).length > 0, kind: s.kind, name: s.name },
       geometry: s.geometry,
     })),
   };
@@ -56,5 +61,5 @@ export function markerFeatures(markers: MapMarker[]): GeoJSON.FeatureCollection 
   };
 }
 
-export const barrierColorExpr = ['match', ['get', 'state'], 'active', '#A61B1B', 'potential', '#B26A00', 'disputed', '#6B21A8', 'resolved', '#4B5563', '#4B5563'] as const;
-export const markerColorExpr = ['match', ['get', 'kind'], 'origin', '#1B6B3A', 'destination', '#0B5FA5', 'user', '#1F4E79', '#14171A'] as const;
+export const barrierColorExpr = ['match', ['get', 'state'], 'active', '#D74B3E', 'potential', '#B26A00', 'disputed', '#6B21A8', 'resolved', '#4B5563', '#4B5563'] as const;
+export const markerColorExpr = ['match', ['get', 'kind'], 'origin', '#1B6B3A', 'destination', '#254F3E', 'user', '#387259', '#14171A'] as const;

@@ -360,3 +360,10 @@ export function formatDuration(seconds: number): string {
   if (min < 60) return `ok. ${Math.max(1, min)} min`;
   return `ok. ${Math.floor(min / 60)} h ${min % 60} min`;
 }
+
+/** NMT is an additional ground profile, never proof of sidewalk accessibility. */
+export type TerrainProfileResult = {
+  source: string; sourceUrl: string; fetchedAt: string; surveyedAt: null;
+  model: string; resolutionM: number; warning: string;
+  points: (Coordinate & { distanceM: number; elevationM: number | null })[];
+};

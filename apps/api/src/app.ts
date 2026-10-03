@@ -1,3 +1,4 @@
+import { terrainProfile } from './terrain/nmt.ts';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
@@ -58,6 +59,13 @@ export async function buildApp(ctx: AppContext): Promise<FastifyInstance> {
     if (!ctx.graph) return fail(reply, 503, 'NO_GRAPH', 'Graf nie został jeszcze zaimportowany.');
     const r = await ctx.db.query(`select ST_AsGeoJSON(ST_Simplify(boundary, 0.0005))::json as geom from graph_versions where id = $1`, [ctx.graph.meta.version]);
     return { version: ctx.graph.meta.version, bounds: ctx.graph.meta.bounds, boundary: r.rows[0]?.geom ?? null };
+  });
+
+  // Optional ground elevation profile. Bounded requests, no automatic routing changes.
+  app.post('/v1/terrain/profile', { config: { rateLimit: { max: 6, timeWindow: '1 minute' } } }, async (req, reply) => {
+    const body = z.object({ points: z.array(z.object({ latitude: z.number().min(49.9).max(50.22), longitude: z.number().min(19.7).max(20.3) })).min(2).max(100) }).parse(req.body);
+    try { return await terrainProfile(body.points); }
+    catch { return fail(reply, 503, 'TERRAIN_UNAVAILABLE', 'Profil NMT jest chwilowo niedostępny. Trasa i dane o barierach pozostają dostępne.'); }
   });
 
   // --- miejsca i placówki ---

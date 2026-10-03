@@ -1,5 +1,5 @@
 import type {
-  AssistantRequest, AssistantResponse, Barrier, Coordinate, DataMode, Facility, FeedbackRequest, Place, Preferences, ReportRequest, RouteResult, RouteSegment, SourcesResponse, NoRouteDetails,
+  TerrainProfileResult, AssistantRequest, AssistantResponse, Barrier, Coordinate, DataMode, Facility, FeedbackRequest, Place, Preferences, ReportRequest, RouteResult, RouteSegment, SourcesResponse, NoRouteDetails,
 } from '@pewnyszlak/domain';
 import { Platform } from 'react-native';
 
@@ -46,6 +46,7 @@ const qs = (params: Record<string, string | number | boolean | undefined>) =>
   Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(String(v))}`).join('&');
 
 export const api = {
+  terrain: (points: Coordinate[]) => request<TerrainProfileResult>('/v1/terrain/profile', { method: 'POST', body: JSON.stringify({ points }) }),
   health: () => request<{ ok: boolean; graph: { version: string | null; nodes: number; edges: number } }>('/v1/health'),
   sources: () => request<SourcesResponse>('/v1/sources'),
   searchPlaces: (q: string, near?: Coordinate | null) => request<{ items: Place[] }>(`/v1/places?${qs({ q, lat: near?.latitude, lon: near?.longitude, limit: 10 })}`),
