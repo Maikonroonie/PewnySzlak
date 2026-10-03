@@ -81,12 +81,22 @@ Wniosek: pełny graf miasta mieści się w pamięci jednego procesu i odpowiada 
 | Platforma | Stan |
 |---|---|
 | Web | `npm run build:web` → `apps/mobile/dist` (statyczny eksport, serwowany przez nginx w `apps/mobile/Dockerfile.web` lub `npx serve`). Testy e2e przechodzą na tym eksporcie. |
-| Android | `npx expo prebuild --platform android` wykonany poprawnie (SDK 36, Gradle 9.3.1). Wynik `assembleDebug`: **patrz sekcja 4.1**. |
+| Android | `npx expo prebuild --platform android` + `assembleDebug` **zakończone powodzeniem**, APK 297 MB (debug, 4 ABI). Szczegóły w sekcji 4.1. |
 | iOS | Nie budowano – wymaga macOS/Xcode lub EAS Build (konfiguracja `apps/mobile/eas.json` i opis uprawnienia lokalizacji w `app.json` są gotowe). |
 
 ### 4.1 Android `assembleDebug`
 
-ANDROID_RESULT_PLACEHOLDER
+**Budowa zakończona powodzeniem** (`./gradlew assembleDebug --no-daemon`, 35 min 51 s na czysto, 728 zadań Gradle; wcześniejsza próba nie powiodła się z powodu uszkodzonego pobrania NDK przez sdkmanager – NDK r27b 27.1.12297006 zainstalowano ręcznie).
+
+| Parametr | Wartość |
+|---|---|
+| Plik | `apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk` (297 MB – debug, 4 ABI: arm64-v8a, armeabi-v7a, x86, x86_64, z klientem deweloperskim Expo) |
+| Pakiet | `pl.pewnyszlak.app`, versionName 1.0.0 |
+| SDK | minSdk 24, targetSdk 36, compileSdk 36, NDK 27.1, Kotlin 2.1.20, Gradle 9.3.1 |
+| Biblioteki natywne | `libmaplibre.so` (MapLibre Native), Hermes |
+| Uprawnienia | `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION` (opis użycia w `app.json`) |
+
+Nie wykonano: instalacji i uruchomienia na urządzeniu/emulatorze (brak emulatora w środowisku budowania). Do testu na telefonie: `adb install app-debug.apk`, a w aplikacji ustawić `EXPO_PUBLIC_API_URL` na adres komputera z API (w emulatorze działa domyślne `10.0.2.2:4000`). Wersja wydaniowa (`assembleRelease`, jeden ABI przez `expo build`/EAS) będzie wielokrotnie mniejsza.
 
 ## 5. Zgodność z założeniami planu
 

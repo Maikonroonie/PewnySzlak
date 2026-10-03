@@ -47,7 +47,8 @@ Android/iOS (development build, bo MapLibre to moduł natywny):
 ```bash
 cd apps/mobile
 npx expo prebuild --platform android      # generuje ./android (sprawdzone)
-npx expo run:android                      # wymaga Android SDK + urządzenia/emulatora
+npx expo run:android                      # wymaga Android SDK (platforms;android-36, build-tools;36.0.0, ndk;27.1.12297006) + urządzenia/emulatora
+# samo APK bez urządzenia: cd android && ./gradlew assembleDebug  → app/build/outputs/apk/debug/app-debug.apk (sprawdzone, ~36 min na czysto)
 # iOS: wymaga macOS/Xcode lub EAS Build (eas.json jest przygotowany)
 ```
 
