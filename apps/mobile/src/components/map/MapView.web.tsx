@@ -7,7 +7,7 @@ import { KRAKOW_CENTER } from '../../lib/geo';
 import { previewPosition, shortestBearing } from '../../lib/route-preview';
 import { MapChrome } from './MapChrome';
 import { mapStyle } from './map-style';
-import { barrierColorExpr, barrierFeatures, MAP_ATTRIBUTION, markerColorExpr, markerFeatures, routeFeatures, type MapProps } from './types';
+import { barrierColorExpr, barrierFeatures, comfortColorExpr, comfortFeatures, MAP_ATTRIBUTION_SHORT, markerColorExpr, markerFeatures, routeFeatures, type MapProps } from './types';
 
 setWorkerUrl('/maplibre/maplibre-gl-worker.mjs');
 const EMPTY: GeoJSON.FeatureCollection = { type: 'FeatureCollection', features: [] };
@@ -19,7 +19,7 @@ export default function MapView(props: MapProps) {
   const map = useRef<MLMap | null>(null);
   const loaded = useRef(false);
   const latest = useRef(props); latest.current = props;
-  const [threeD, setThreeD] = useState(true);
+  const [threeD, setThreeD] = useState(false);
   const dimension = useRef(threeD); dimension.current = threeD;
   const [error, setError] = useState(false);
   const routeData = useRef<{ route: MapProps['route']; data: GeoJSON.FeatureCollection }>({ route: null, data: EMPTY });
@@ -29,6 +29,7 @@ export default function MapView(props: MapProps) {
     if (!m || !loaded.current) return;
     if (routeData.current.route !== p.route) routeData.current = { route: p.route, data: p.route ? routeFeatures(p.route) : EMPTY };
     (m.getSource('route') as GeoJSONSource)?.setData(routeData.current.data);
+    (m.getSource('comfort') as GeoJSONSource)?.setData(comfortFeatures(p.comfortEdges ?? []));
     (m.getSource('barriers') as GeoJSONSource)?.setData(barrierFeatures(p.barriers ?? []));
     const markers = [...(p.markers ?? [])];
     if (p.route && p.previewProgress != null) markers.push({ id: 'preview', kind: 'user', coordinate: previewPosition(p.route, p.previewProgress).point });
@@ -54,14 +55,16 @@ export default function MapView(props: MapProps) {
     const p = latest.current, c = p.center ?? KRAKOW_CENTER;
     let m: MLMap;
     try {
-      m = new MLMap({ container: container.current, style: mapStyle, center: [c.longitude, c.latitude], zoom: p.zoom ?? 15.8, pitch: 54, bearing: -18, minZoom: 10, maxZoom: 20, maxPitch: 70, attributionControl: false, pitchWithRotate: true, keyboard: true });
+      m = new MLMap({ container: container.current, style: mapStyle, center: [c.longitude, c.latitude], zoom: p.zoom ?? 15.8, pitch: 0, bearing: 0, minZoom: 10, maxZoom: 20, maxPitch: 70, attributionControl: false, pitchWithRotate: true, keyboard: true });
     } catch (cause) { console.warn('PewnySzlak: map initialization failed', cause); setError(true); return; }
     map.current = m;
     m.addControl(new NavigationControl({ showCompass: true, visualizePitch: true }), 'top-right');
     m.on('error', () => setError(true));
     m.on('load', () => {
-      for (const id of ['route', 'barriers', 'markers']) m.addSource(id, { type: 'geojson', data: EMPTY });
+      for (const id of ['comfort', 'route', 'barriers', 'markers']) m.addSource(id, { type: 'geojson', data: EMPTY });
       const lineLayout = { 'line-cap': 'round', 'line-join': 'round' } as const;
+      m.addLayer({ id: 'comfort-line', type: 'line', source: 'comfort', paint: { 'line-color': comfortColorExpr as never, 'line-width': 5, 'line-opacity': 0.72 }, layout: lineLayout });
+      m.addLayer({ id: 'comfort-uncertain', type: 'line', source: 'comfort', filter: ['==', ['get', 'status'], 'uncertain'], paint: { 'line-color': '#FF9F0A', 'line-width': 5, 'line-dasharray': [1.4, 1.1], 'line-opacity': 0.9 }, layout: { 'line-join': 'round' } });
       m.addLayer({ id: 'route-selected', type: 'line', source: 'route', filter: ['==', ['get', 'segmentId'], ''], paint: { 'line-color': '#DF9C8E', 'line-width': 25, 'line-opacity': 0.32 }, layout: lineLayout });
       m.addLayer({ id: 'route-casing', type: 'line', source: 'route', paint: { 'line-color': '#FFFFFF', 'line-width': 11, 'line-opacity': 0.95 }, layout: lineLayout });
       m.addLayer({ id: 'route-ok', type: 'line', source: 'route', filter: ['all', ['!', ['get', 'uncertain']], ['!', ['get', 'difficult']]], paint: { 'line-color': colors.routeOk, 'line-width': 6 }, layout: lineLayout });
@@ -79,19 +82,23 @@ export default function MapView(props: MapProps) {
     m.on('zoomstart', (event) => { if (event.originalEvent) latest.current.onInteract?.(); });
     m.on('click', (event) => {
       const p = latest.current;
-      const layers = ['barrier-dot', 'route-difficult', 'route-ok', 'route-uncertain'].filter(l => m.getLayer(l));
+      const layers = ['marker-dot', 'barrier-dot', 'route-difficult', 'route-ok', 'route-uncertain', 'comfort-line', 'comfort-uncertain'].filter(l => m.getLayer(l));
       const hits = layers.length ? m.queryRenderedFeatures(event.point, { layers }) : [];
+      const mark = hits.find(f => f.properties?.markerId);
+      if (mark) { p.onMarkerPress?.(String(mark.properties.markerId)); return; }
       const b = hits.find(f => f.properties?.barrierId);
       if (b) { const barrier = p.barriers?.find(v => v.id === b.properties.barrierId); if (barrier) p.onBarrierPress?.(barrier); return; }
       const s = hits.find(f => f.properties?.segmentId);
       if (s) { p.onSegmentPress?.(String(s.properties.segmentId)); return; }
+      const cEdge = hits.find(f => f.properties?.edgeId);
+      if (cEdge) { p.onSegmentPress?.(String(cEdge.properties.edgeId)); return; }
       p.onPress?.({ longitude: event.lngLat.lng, latitude: event.lngLat.lat });
     });
     m.getCanvas().setAttribute('aria-hidden', 'true'); m.getCanvas().setAttribute('tabindex', '-1');
     const observer = new ResizeObserver(() => m.resize()); observer.observe(container.current);
     return () => { observer.disconnect(); m.remove(); map.current = null; loaded.current = false; };
   }, []);
-  useEffect(sync, [props.route, props.barriers, props.markers, props.selectedSegmentId]);
+  useEffect(sync, [props.route, props.comfortEdges, props.barriers, props.markers, props.selectedSegmentId]);
   useEffect(() => {
     const m = map.current, p = latest.current;
     if (m && loaded.current) {
@@ -102,10 +109,42 @@ export default function MapView(props: MapProps) {
     camera();
   }, [props.bounds, props.center, props.zoom, props.heading, props.follow, props.reduceMotion, props.previewProgress, threeD]);
 
-  return <View style={[{ flex: 1, minHeight: 260, borderRadius: 24, overflow: 'hidden', backgroundColor: '#e6ebdf' }, style]} testID={testID}>
+  // Izoluj touch mapy od RN-web respondera (błąd „Cannot find single active touch”).
+  const stopRnTouch = (e: { stopPropagation?: () => void }) => { e.stopPropagation?.(); };
+
+  return <View style={[{ flex: 1, minHeight: 260, borderRadius: 24, overflow: 'hidden', backgroundColor: '#F5F5F7' }, style]} testID={testID}>
     <Text style={srOnly}>{accessibilityLabel}</Text>
-    <View style={{ flex: 1 }}><div ref={container} style={{ width: '100%', height: '100%', minHeight: 260 }} /></View>
+    <View style={{ flex: 1 }}>
+      <div
+        ref={container}
+        style={{ width: '100%', height: '100%', minHeight: 260, touchAction: 'none' }}
+        onTouchStart={stopRnTouch}
+        onTouchMove={stopRnTouch}
+        onTouchEnd={stopRnTouch}
+        onTouchCancel={stopRnTouch}
+        onPointerDown={stopRnTouch}
+      />
+    </View>
     <MapChrome threeD={threeD} onToggle={() => { props.onInteract?.(); setThreeD(v => !v); }} error={error} />
-    <Text style={{ fontSize: 10, color: colors.textMuted, paddingHorizontal: 12, paddingVertical: 5, backgroundColor: '#F6F5EF' }}>{MAP_ATTRIBUTION} · Bryły budynków poglądowe</Text>
+    <Text
+      accessibilityLabel={MAP_ATTRIBUTION_SHORT}
+      style={{
+        position: 'absolute',
+        left: 8,
+        bottom: 8,
+        maxWidth: '70%',
+        fontSize: 9,
+        lineHeight: 12,
+        color: colors.textMuted,
+        backgroundColor: 'rgba(255,255,255,0.82)',
+        paddingHorizontal: 6,
+        paddingVertical: 3,
+        borderRadius: 6,
+        overflow: 'hidden',
+      }}
+      numberOfLines={1}
+    >
+      {MAP_ATTRIBUTION_SHORT}
+    </Text>
   </View>;
 }

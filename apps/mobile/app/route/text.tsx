@@ -36,7 +36,7 @@ export default function RouteTextScreen() {
       {route.warnings.length ? (
         <Card tone="warn">
           <P style={{ fontWeight: '700' }}>Ostrzeżenia</P>
-          {route.warnings.map((w) => <P key={w}>• {w}</P>)}
+          {route.warnings.map((w, i) => <P key={`rw-${i}`}>• {w}</P>)}
         </Card>
       ) : null}
 
@@ -55,7 +55,7 @@ export default function RouteTextScreen() {
               <P style={{ fontWeight: '700' }}>{i + 1}. {segmentKindLabels[s.kind]}{s.name ? ` – ${s.name}` : ''}, {formatDistance(s.lengthM)}</P>
               <P>{s.uncertain ? 'Odcinek niepewny.' : 'Dane kompletne wg OSM.'} {summary ? `${summary[0]!.toUpperCase()}${summary.slice(1)}.` : ''} {missing ? `${missing[0]!.toUpperCase()}${missing.slice(1)}.` : ''}</P>
               {s.barriers.map((b) => <P key={b.id}>Bariera ({stateLabels[b.state].toLowerCase()}): {b.title}.</P>)}
-              {s.warnings.map((w) => <P key={w}>Uwaga: {w}</P>)}
+              {s.warnings.map((w, i) => <P key={`${s.id}-w-${i}`}>Uwaga: {w}</P>)}
               <Button title={`Źródła odcinka ${i + 1}`} variant="ghost" onPress={() => router.push(`/route/segment/${encodeURIComponent(s.id)}`)} style={{ alignSelf: 'flex-start' }} />
             </View>
           );

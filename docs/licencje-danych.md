@@ -11,7 +11,7 @@ Każde źródło w aplikacji ma wpis w `apps/api/src/sources/status.ts` (`SOURCE
 | **psoz.pl – MCP `szukaj`** | Strona placówki (pageUrl) powiązana nazwą świadczeniodawcy | MCP przez HTTP | Serwis zewnętrzny, bez klucza; wykorzystujemy wyłącznie identyfikator/URL strony | Link w `psozUrl` | Codziennie | Pole `psoz_url` w `facilities` |
 | **Zgłoszenia społeczności** | Bariery zgłaszane w aplikacji (typ, tytuł, opis, położenie, odcinki), potwierdzenia/zaprzeczenia | Formularz w aplikacji → `POST /v1/barriers` | Dane własne projektu; użytkownik anonimowy (losowy identyfikator instalacji, przechowywany jako skrót SHA-256). Zgłaszający akceptuje publikację treści | — | Na bieżąco (warstwa barier odświeżana co 60 s) | Tabele `barriers`, `barrier_evidence`, `barrier_feedback` |
 | **Korekty operatora** | Weryfikacje, zmiany stanu, usunięcia | CLI `npm run operator` / HTTP z tokenem | Dane własne | — | Ręcznie | `operator_log` + dowody `verified` |
-| **Dane demonstracyjne** | 5 scenariuszy barier (remont Grodzkiej, sporny krawężnik, nieaktualne zgłoszenie windy, sygnał z przetargu, bariera usunięta) | `npm run demo:seed` | Dane własne, oznaczone `is_demo` | Odznaka „DEMO” w aplikacji | Statyczne | Te same tabele, flaga `is_demo`; nigdy w trybie „Dane bieżące” |
+| **MSIP Kraków – zabytki** (rejestr + gminna ewidencja) | Nazwa/typ obiektu, adres, datowanie, nr wpisu | ArcGIS REST `zabytki_do_pobrania` przy `/v1/explore` | Dane UMK / MSIP – **orientacyjne**, nie zastępują opinii konserwatora | Nazwa źródła + link do katalogu MSIP | Na żądanie (explore) | Nie cache’ujemy trwale – odpowiedź w bieżącym explore |
 
 ## Zasady
 

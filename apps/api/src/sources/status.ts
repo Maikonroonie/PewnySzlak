@@ -8,6 +8,7 @@ export const SOURCE_META: Record<Exclude<Source, 'demo' | 'operator'>, { name: s
   'z-dykty': { name: 'z-dykty.pl – MCP dane gmin (BZP/eZamówienia)', frequency: 'codziennie', licence: 'CC BY 4.0 (z-dykty.pl); dane źródłowe: BZP', staleAfterHours: 48 },
   nfz: { name: 'NFZ – Informator o Terminach Leczenia (API ITL)', frequency: 'codziennie', licence: 'Dane publiczne NFZ (api.nfz.gov.pl)', staleAfterHours: 48 },
   psoz: { name: 'psoz.pl – MCP ochrona zdrowia', frequency: 'codziennie', licence: 'Dane publiczne agregowane przez psoz.pl', staleAfterHours: 72 },
+  msip: { name: 'MSIP Kraków – rejestr i ewidencja zabytków', frequency: 'na żądanie (explore)', licence: 'Dane UMK / MSIP – charakter orientacyjny; potwierdzenie u konserwatora', staleAfterHours: Infinity },
 };
 
 export async function sourcesStatus(db: Db, version: ActiveVersion | null, mode: DataMode, counts: { edges: number }): Promise<SourcesResponse> {
@@ -30,6 +31,7 @@ export async function sourcesStatus(db: Db, version: ActiveVersion | null, mode:
     let state: SourceStatus['state'] = 'never';
     let message = 'Źródło nie było jeszcze synchronizowane.';
     if (key === 'community') { state = 'available'; message = 'Zgłoszenia zapisywane są bezpośrednio w bazie.'; }
+    else if (key === 'msip') { state = 'available'; message = 'Zapytania live do MSIP przy „Odkryj okolice” (zabytki). Dane orientacyjne.'; }
     else if (lastSuccess) {
       const ageH = (now - Date.parse(lastSuccess)) / 3_600_000;
       if (run && run.ok === false && Date.parse(run.started_at) > Date.parse(lastSuccess)) { state = 'unavailable'; message = `Ostatnia próba nieudana: ${run.message ?? 'błąd'}. Używamy danych z ${new Date(lastSuccess).toLocaleString('pl-PL')}.`; }

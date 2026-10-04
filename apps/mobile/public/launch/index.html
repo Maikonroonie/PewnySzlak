@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#111d1a">
+<title>PewnySzlak — Preferencje → trasa dla turysty</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Crect width='40' height='40' rx='12' fill='%23d1f881'/%3E%3Cpath d='M10 29 20 9l10 20-10-5z' fill='%23131f1a'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="film.css">
+</head>
+<body>
+<svg class="symbols" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><defs>
+<symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+<symbol id="i-bike" viewBox="0 0 24 24"><circle cx="5" cy="16" r="4"/><circle cx="19" cy="16" r="4"/><path d="m5 16 5-9 5 9H5m3-9h5m2-4h3l3 13M10 7l5 9"/></symbol>
+<symbol id="i-walk" viewBox="0 0 24 24"><circle cx="14" cy="4" r="2"/><path d="m7 12 4-4 4 1 2 5h4M11 8l-2 8-4 5m5-8 5 4v5"/></symbol>
+<symbol id="i-wheel" viewBox="0 0 24 24"><circle cx="12" cy="3" r="2"/><path d="m11 7 1 7h6l3 6m-9-10h6M8 9a7 7 0 1 0 7 10"/></symbol>
+<symbol id="i-pin" viewBox="0 0 24 24"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></symbol>
+<symbol id="i-spark" viewBox="0 0 24 24"><path d="m12 2 2.6 7.4L22 12l-7.4 2.6L12 22l-2.6-7.4L2 12l7.4-2.6ZM20 2v4m-2-2h4"/></symbol>
+<symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+<symbol id="i-slope" viewBox="0 0 24 24"><path d="M3 19h18M5 17 19 7"/><path d="M14 7h5v5"/></symbol>
+<symbol id="i-steps" viewBox="0 0 24 24"><path d="M4 20h5v-5h5V10h5V4"/></symbol>
+<symbol id="i-road" viewBox="0 0 24 24"><path d="M6 3 3 21h18L18 3ZM12 3v18M9 9h6M8 14h8"/></symbol>
+<symbol id="i-width" viewBox="0 0 24 24"><path d="M4 12h16M7 8l-3 4 3 4M17 8l3 4-3 4"/></symbol>
+<symbol id="i-kerb" viewBox="0 0 24 24"><path d="M3 16h18M5 16V8h4v8M13 16V11h6v5"/></symbol>
+<symbol id="i-play" viewBox="0 0 24 24"><path d="m8 4 12 8-12 8Z"/></symbol>
+<symbol id="i-pause" viewBox="0 0 24 24"><path d="M8 5v14M16 5v14"/></symbol>
+<symbol id="i-full" viewBox="0 0 24 24"><path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5"/></symbol>
+</defs></svg>
+<header class="page-header"><a class="brand" href="/" aria-label="PewnySzlak"><span class="brand-mark">↗</span> pewnyszlak<span class="brand-dot">.</span></a><span class="edition">FILM KONCEPTOWY <span>—</span> 001</span><span class="concept"><i></i> PREFERENCJE → TRASA</span></header>
+<main>
+<div class="cinema" id="cinema">
+<div class="stage" id="stage" role="img" aria-label="Animacja PewnySzlak: ustawiasz preferencje (nachylenie, schody, nawierzchnia), a aplikacja wyznacza trasę turystyczną dopasowaną do Ciebie.">
+<div class="ambient"></div><div class="orb orb-one"></div><div class="orb orb-two"></div><div class="grain"></div>
+<div class="stage-brand"><span class="brand-mark">↗</span> pewnyszlak.</div>
+<div class="stage-meta"><span class="live-dot"></span> TRASA POD TWOJE PREFERENCJE</div>
+<div class="coordinates">50°03′41″ N &nbsp; 19°56′18″ E<br><span>KRAKÓW</span></div>
+<div class="map-space" id="map-space"><div class="map-plane" id="map-plane"><svg id="city-map" viewBox="0 0 1600 1250" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"></svg></div></div>
+<div class="map-vignette" id="map-vignette"></div>
+
+<section class="copy shot" id="copy-intro">
+  <div class="eyebrow"><span>01 / START</span><b>NIE LOSOWA TRASA</b></div>
+  <h1>Najpierw<br><em>Twoje zasady.</em></h1>
+  <p>Nachylenie, nawierzchnia, schody.<br>Potem dopiero fajna trasa dla turysty.</p>
+  <div class="copy-footer"><span class="tiny-line"></span> PREFERENCJE STERUJĄ TRASĄ</div>
+</section>
+
+<section class="copy copy-params shot" id="copy-params">
+  <div class="eyebrow">02 / PARAMETRY</div>
+  <h1>Limity,<br>które <em>liczą się</em>.</h1>
+  <p>Ustawiasz — algorytm słucha. Bez stromizn.</p>
+</section>
+
+<section class="copy shot" id="copy-route">
+  <div class="eyebrow">03 / WYNIK</div>
+  <h1>Trasa<br><em>turystyczna</em><br>pod Ciebie.</h1>
+  <p>Pętla wokół Krakowa, łagodne podjazdy,<br>ładne widoki — bo tak wybrałeś.</p>
+  <div class="distance-art"><span id="distance-large">50</span><small>km<br><i>tam i z powrotem</i></small></div>
+</section>
+
+<section class="copy copy-navigation shot" id="copy-ride">
+  <div class="eyebrow">04 / W TERENIE</div>
+  <h1>Jedziesz.<br><em>Prefy działają.</em></h1>
+  <p>GPS prowadzi po trasie, która już spełnia<br>Twoje limity nachylenia i nawierzchni.</p>
+</section>
+
+<section class="copy shot" id="copy-outro-text">
+  <div class="eyebrow">05 / IDEA</div>
+  <h1>Preferencje.<br><em>Potem trasa.</em></h1>
+  <p>Nie „najkrótsza”. Tylko taka,<br>na której turysta naprawdę chce być.</p>
+</section>
+
+<!-- Big preference showcase on stage -->
+<div class="params-board shot" id="params-board">
+  <div class="params-title">Twoje limity</div>
+  <div class="param-card hero" id="param-incline">
+    <span class="param-icon"><svg><use href="#i-slope"/></svg></span>
+    <div>
+      <small>MAKSYMALNE NACHYLENIE</small>
+      <strong><span id="incline-value">12</span><em>%</em></strong>
+    </div>
+    <div class="incline-meter"><i id="incline-fill"></i></div>
+  </div>
+  <div class="param-grid">
+    <div class="param-card" id="param-effort"><span class="param-icon"><svg><use href="#i-bike"/></svg></span><div><small>WYSIŁEK</small><strong id="effort-value">Normalnie</strong></div></div>
+    <div class="param-card" id="param-steps"><span class="param-icon"><svg><use href="#i-steps"/></svg></span><div><small>SCHODY</small><strong id="steps-value">Omijaj</strong></div><span class="param-badge" id="steps-badge">WŁ</span></div>
+    <div class="param-card" id="param-surface"><span class="param-icon"><svg><use href="#i-road"/></svg></span><div><small>NAWIERZCHNIA</small><strong id="surface-value">Bez złej</strong></div><span class="param-badge" id="surface-badge">WŁ</span></div>
+    <div class="param-card" id="param-kerb"><span class="param-icon"><svg><use href="#i-kerb"/></svg></span><div><small>KRAWĘŻNIK</small><strong><span id="kerb-value">12</span> cm</strong></div></div>
+    <div class="param-card" id="param-width"><span class="param-icon"><svg><use href="#i-width"/></svg></span><div><small>MIN. SZEROKOŚĆ</small><strong><span id="width-value">60</span> cm</strong></div></div>
+    <div class="param-card" id="param-mode"><span class="param-icon"><svg><use href="#i-bike"/></svg></span><div><small>TRYB</small><strong>Rower</strong></div></div>
+  </div>
+</div>
+
+<div class="phone-wrap" id="phone-wrap">
+  <div class="phone-shadow"></div>
+  <div class="phone" id="phone">
+    <div class="phone-status"><span>9:41</span><span class="island"></span><span>▮▮▮ &nbsp; ▰</span></div>
+    <div class="phone-page preferences" id="phone-preferences">
+      <div class="phone-top"><span>↗</span><span>PREFERENCJE</span><span>01</span></div>
+      <h2>Jak lubisz<br>się poruszać?</h2>
+      <p class="phone-sub">Te wartości sterują wyznaczaniem trasy.</p>
+      <div class="modes">
+        <div class="mode" data-mode="walk"><svg><use href="#i-walk"/></svg><span>Spacer</span></div>
+        <div class="mode" id="bicycle-mode"><span class="selected-check"><svg><use href="#i-check"/></svg></span><svg><use href="#i-bike"/></svg><span>Rower</span></div>
+        <div class="mode" data-mode="wheel"><svg><use href="#i-wheel"/></svg><span>Wózek</span></div>
+      </div>
+      <div class="phone-label">LIMITY TRASY</div>
+      <div class="pref-meter" id="incline-row">
+        <div class="pref-meter-top"><span>Maksymalne nachylenie</span><b id="phone-incline">12%</b></div>
+        <div class="effort-track"><i id="phone-incline-bar"></i><span id="phone-incline-knob"></span></div>
+        <div class="effort-labels"><span>łagodnie</span><span>ostro</span></div>
+      </div>
+      <div class="pref-meter" id="effort-row">
+        <div class="pref-meter-top"><span>Wysiłek</span><b id="phone-effort">Normalnie</b></div>
+        <div class="effort-chips"><span id="effort-chip-easy">Lekko</span><span class="on" id="effort-chip-normal">Normalnie</span><span id="effort-chip-hard">Wyzwanie</span></div>
+      </div>
+      <div class="preference-row" id="row-steps"><span class="pref-icon"><svg><use href="#i-steps"/></svg></span><span>Omijaj schody<small>Bez schodów na trasie</small></span><span class="toggle on" id="toggle-steps"></span></div>
+      <div class="preference-row" id="row-surface"><span class="pref-icon"><svg><use href="#i-road"/></svg></span><span>Omijaj złą nawierzchnię<small>Asfalt, kostka, gładko</small></span><span class="toggle" id="toggle-surface"></span></div>
+      <div class="phone-cta">Szukaj trasy <svg><use href="#i-arrow"/></svg></div>
+    </div>
+    <div class="phone-page planner" id="phone-planner">
+      <div class="phone-top"><span>↗</span><span>PLANOWANIE</span><span>02</span></div>
+      <h2>Dokąd dziś<br>jedziesz?</h2>
+      <div class="trip-tabs"><span>W jedną stronę</span><span class="active">Pętla ↻</span></div>
+      <div class="origin-field"><span class="origin-dot"></span><div><small>START I META</small><strong>Stare Miasto, Kraków</strong></div><svg><use href="#i-pin"/></svg></div>
+      <div class="phone-label">DŁUGOŚĆ TRASY</div>
+      <div class="distance-input"><span id="typed-distance"></span><span class="caret"></span><small>km</small></div>
+      <div class="distance-slider"><div id="distance-slider-fill"></div><i id="distance-knob"></i></div>
+      <div class="effort-labels"><span>10 km</span><span>100 km</span></div>
+      <div class="scenic-note"><svg><use href="#i-slope"/></svg><span>Limity: max <strong id="note-incline">6%</strong>, bez schodów,<br>ładna nawierzchnia — trasa turystyczna.</span></div>
+      <div class="phone-cta" id="generate-button"><span id="generate-label">Wyznacz trasę</span><svg><use href="#i-spark"/></svg></div>
+      <div class="generated"><svg><use href="#i-check"/></svg> Trasa gotowa — pod Twoje preferencje.</div>
+    </div>
+    <div class="home-indicator"></div>
+    <div class="tap-ring" id="tap-ring"></div>
+  </div>
+</div>
+
+<div class="floating-pill shot" id="mode-pill">
+  <span class="pill-icon"><svg><use href="#i-bike"/></svg></span>
+  <div><small>TRYB</small><strong>Rower — jedziemy</strong></div>
+  <span class="pill-check">✓</span>
+</div>
+
+<div class="route-ready shot" id="route-ready">
+  <div class="card-eyebrow"><i></i> TRASA TURYSTYCZNA</div>
+  <div class="ready-metrics"><strong>50,0 <small>km</small></strong><span>↻<small>PĘTLA</small></span></div>
+  <div class="ready-details">
+    <span>max 5,8%<small>nachylenie</small></span>
+    <span>0 schodów<small>omijane</small></span>
+    <span>Wisła<small>widoki</small></span>
+  </div>
+  <div class="ready-line"></div>
+  <div class="ready-foot"><svg><use href="#i-check"/></svg> Spełnia Twoje preferencje <span>↗</span></div>
+</div>
+
+<div class="match-strip shot" id="match-strip">
+  <div class="match-item ok"><svg><use href="#i-slope"/></svg> Nachylenie ≤ 6%</div>
+  <div class="match-item ok"><svg><use href="#i-steps"/></svg> Bez schodów</div>
+  <div class="match-item ok"><svg><use href="#i-road"/></svg> Dobra nawierzchnia</div>
+  <div class="match-item ok"><svg><use href="#i-pin"/></svg> Trasa turystyczna</div>
+</div>
+
+<div class="nav-hud shot" id="nav-hud">
+  <div class="turn-symbol"><svg><use href="#i-arrow"/></svg></div>
+  <div><small>ZA <b id="turn-distance">240</b> M</small><strong>Ścieżka nad Wisłą</strong><span>łagodny odcinek · 2% nachylenia</span></div>
+  <span class="nav-compass">N ↑</span>
+</div>
+
+<div class="ride-progress shot" id="ride-progress">
+  <div class="ride-progress-top"><span class="live-dot"></span> NA ŻYWO <span class="gps-badge">GPS</span></div>
+  <div class="ride-values">
+    <div><strong id="ridden-distance">12,4</strong><span>km za Tobą</span></div>
+    <div><strong>18</strong><span>km/h</span></div>
+    <div><strong id="live-grade">2,1</strong><span>% nachylenie</span></div>
+  </div>
+  <div class="ride-track"><i id="ride-track-fill"></i></div>
+  <div class="ride-location"><svg><use href="#i-pin"/></svg> Kraków · bulwary Wisły <span>↗</span></div>
+</div>
+
+<div class="map-label shot" id="river-label">W I S Ł A <small>ŁAGODNIE · WIDOKOWO</small></div>
+
+<div class="outro shot" id="outro">
+  <div class="outro-icon">↗</div>
+  <div class="eyebrow">NA PODSTAWIE PREFERENCJI</div>
+  <h1>Wyznaczamy<br><em>fajną trasę</em><br>dla turysty.</h1>
+  <div class="outro-brand">pewnyszlak.</div>
+  <span class="outro-tag">NACHYLENIE · NAWIERZCHNIA · SCHODY · TWOJA PĘTLA</span>
+</div>
+
+<div class="film-footer">
+  <span id="scene-caption">NAJPIERW PREFERENCJE. POTEM TRASA.</span>
+  <span>FILM KONCEPTOWY · TRASA ILUSTRACYJNA</span>
+</div>
+<div class="scene-number"><span id="scene-number">01</span><i>/</i>05</div>
+<div class="transition-veil" id="transition-veil"></div>
+</div>
+</div>
+
+<div class="controls" id="controls">
+  <div class="transport">
+    <button id="play" aria-label="Odtwórz film"><svg><use href="#i-play"/></svg></button>
+    <button id="restart" aria-label="Od początku">↺</button>
+    <span id="time" class="time">00:00 <i>/ 01:00</i></span>
+  </div>
+  <div class="scrubber"><label class="sr-only" for="seek">Pozycja filmu</label><input id="seek" type="range" min="0" max="60" step="0.1" value="0"></div>
+  <button class="speed-button" id="speed" aria-label="Prędkość">1×</button>
+  <button id="capture" class="capture-button">Czysty kadr <span>↗</span></button>
+  <button id="fullscreen" aria-label="Pełny ekran"><svg><use href="#i-full"/></svg></button>
+</div>
+<nav class="chapters" aria-label="Rozdziały">
+  <button data-time="0"><span>01</span> Preferencje <i>00:00</i></button>
+  <button data-time="11"><span>02</span> Parametry <i>00:11</i></button>
+  <button data-time="22"><span>03</span> Trasa <i>00:22</i></button>
+  <button data-time="36"><span>04</span> Jazda <i>00:36</i></button>
+  <button data-time="50"><span>05</span> Idea <i>00:50</i></button>
+</nav>
+<div class="page-note">
+  <span>60 sekund: jak preferencje (m.in. nachylenie) budują trasę turystyczną.</span>
+  <span>SPACJA play / pauza &nbsp; · &nbsp; ← → przewijanie &nbsp; · &nbsp; C czysty kadr &nbsp; · &nbsp; ESC wyjście</span>
+</div>
+</main>
+<button id="exit-capture" aria-label="Wyjdź z czystego kadru">Wyjdź ↙</button>
+<p class="sr-only" id="chapter-announcement" aria-live="polite"></p>
+<script src="film.js"></script>
+</body>
+</html>

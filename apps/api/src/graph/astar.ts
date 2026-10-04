@@ -74,7 +74,48 @@ export function snapPoint(graph: Graph, c: Coordinate, prefs: Preferences, layer
   return { edge: hit.edge, point: hit.point, alongM: hit.alongM, distanceM: hit.distanceM, evaluation: evalOf(hit.edge) };
 }
 
+/** Kilka kandydatów snapu (parki/stawy często lądują na izolowanej ścieżce – bierzemy dalszy, ale połączony). */
+export function snapPointCandidates(graph: Graph, c: Coordinate, prefs: Preferences, layer: BarrierLayer, maxDistanceM = 900, limit = 12): SnapPoint[] {
+  const evals = new Map<number, EdgeEvaluation>();
+  const evalOf = (e: Edge) => {
+    let ev = evals.get(e.idx);
+    if (!ev) { ev = evaluateEdge(e, prefs, layer); evals.set(e.idx, ev); }
+    return ev;
+  };
+  return graph
+    .snapMany(c.longitude, c.latitude, (e) => !evalOf(e).excluded, maxDistanceM, limit)
+    .map((hit) => ({ edge: hit.edge, point: hit.point, alongM: hit.alongM, distanceM: hit.distanceM, evaluation: evalOf(hit.edge) }));
+}
+
 const isSnap = (s: SnapPoint | SnapFailure): s is SnapPoint => 'edge' in s;
+
+/**
+ * Przesuwa cel/waypoint na najbliższy punkt sieci osiągalny z `from`
+ * (omija „wyspy” ścieżek wokół stawów / łąk w OSM).
+ */
+export function resolveConnectedCoordinate(
+  graph: Graph,
+  from: Coordinate,
+  target: Coordinate,
+  prefs: Preferences,
+  layer: BarrierLayer,
+  maxDistanceM = 900,
+): Coordinate {
+  const candidates = snapPointCandidates(graph, target, prefs, layer, maxDistanceM, 14);
+  if (candidates.length === 0) return target;
+  const relaxed: Preferences = { ...prefs, avoidSteps: false, avoidRoughSurface: false, maxIncline: 30, maxKerbHeightCm: 30, minWidthCm: 30, unknownPolicy: 'penalize' };
+  for (const hit of candidates) {
+    const coord = { longitude: hit.point[0], latitude: hit.point[1] };
+    if (reachable(graph, from, coord, prefs, layer, 10_000) === true) return coord;
+  }
+  for (const hit of candidates) {
+    const coord = { longitude: hit.point[0], latitude: hit.point[1] };
+    if (reachable(graph, from, coord, relaxed, layerEmpty(), 10_000) === true) return coord;
+  }
+  // Najbliższy dopuszczalny snap – lepszy niż centroid w środku stawu.
+  const best = candidates[0]!;
+  return { longitude: best.point[0], latitude: best.point[1] };
+}
 
 /**
  * Szybki test osiągalności (dwukierunkowy BFS z naprzemiennym rozszerzaniem frontów).
@@ -155,7 +196,7 @@ export function astar(graph: Graph, origin: Coordinate, destination: Coordinate,
       return { ok: false, origin: start, destination: end, details: { reason: 'disconnected', explanation: 'Punkty nie są połączone w sieci pieszej OSM w granicach pokrycia.', suggestions: [], exploredNodes: explored } };
     }
     // Rozróżniamy brak połączenia w sieci od zablokowania przez preferencje/bariery: sprawdzamy, które pojedyncze poluzowanie przywraca trasę.
-    const relaxed: Preferences = { avoidSteps: false, avoidRoughSurface: false, maxIncline: 30, maxKerbHeightCm: 30, minWidthCm: 30, unknownPolicy: 'penalize' };
+    const relaxed: Preferences = { ...prefs, avoidSteps: false, avoidRoughSurface: false, maxIncline: 30, maxKerbHeightCm: 30, minWidthCm: 30, unknownPolicy: 'penalize' };
     if (reachable(graph, origin, destination, relaxed, layerEmpty()) !== true) {
       return {
         ok: false, origin: start, destination: end,

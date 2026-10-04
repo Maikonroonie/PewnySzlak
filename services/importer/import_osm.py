@@ -56,10 +56,10 @@ SPLIT_NODE_HIGHWAY = {"crossing", "elevator", "steps", "traffic_signals"}
 
 POI_KEYS = ("amenity", "shop", "tourism", "leisure", "healthcare", "office", "historic", "public_transport", "railway", "building", "man_made", "craft", "sport", "emergency")
 POI_SKIP_VALUES = {
-    "amenity": {"parking", "parking_space", "bench", "waste_basket", "bicycle_parking", "vending_machine", "recycling", "parking_entrance", "waste_disposal", "grit_bin", "charging_station"},
+    "amenity": {"parking", "parking_space", "bench", "waste_basket", "bicycle_parking", "vending_machine", "recycling", "parking_entrance", "waste_disposal", "grit_bin", "charging_station", "bus_station"},
     "building": {"yes", "house", "apartments", "residential", "garage", "garages", "shed", "roof", "detached", "terrace", "industrial", "warehouse", "service", "hut", "construction", "semidetached_house", "bungalow"},
-    "railway": {"switch", "buffer_stop", "level_crossing", "signal", "crossing", "milestone", "rail", "tram", "subway", "razed", "disused", "abandoned"},
-    "public_transport": {"stop_position"},
+    "railway": {"switch", "buffer_stop", "level_crossing", "signal", "crossing", "milestone", "rail", "tram", "subway", "razed", "disused", "abandoned", "tram_stop", "halt", "station", "subway_entrance", "stop"},
+    "public_transport": {"stop_position", "platform", "stop_area", "station"},
     "man_made": {"surveillance", "manhole", "utility_pole", "street_cabinet", "flagpole", "pipeline", "pole", "mast", "monitoring_station"},
     "emergency": {"fire_hydrant", "defibrillator"},
     "leisure": {"picnic_table", "slipway"},

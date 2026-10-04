@@ -1,5 +1,5 @@
 import type {
-  TerrainProfileResult, AssistantRequest, AssistantResponse, Barrier, Coordinate, DataMode, Facility, FeedbackRequest, Place, Preferences, ReportRequest, RouteResult, RouteSegment, SourcesResponse, NoRouteDetails,
+  TerrainProfileResult, AssistantRequest, AssistantResponse, Barrier, Coordinate, DataMode, ExploreResponse, Facility, FeedbackRequest, Place, Preferences, ReportRequest, RouteResult, RouteSegment, SourcesResponse, NoRouteDetails,
 } from '@pewnyszlak/domain';
 import { Platform } from 'react-native';
 
@@ -49,12 +49,21 @@ export const api = {
   terrain: (points: Coordinate[]) => request<TerrainProfileResult>('/v1/terrain/profile', { method: 'POST', body: JSON.stringify({ points }) }),
   health: () => request<{ ok: boolean; graph: { version: string | null; nodes: number; edges: number } }>('/v1/health'),
   sources: () => request<SourcesResponse>('/v1/sources'),
+  explore: (origin: Coordinate, preferences: Preferences, radiusM = 600) => request<ExploreResponse>('/v1/explore', { method: 'POST', body: JSON.stringify({ origin, preferences, radiusM }) }),
   searchPlaces: (q: string, near?: Coordinate | null) => request<{ items: Place[] }>(`/v1/places?${qs({ q, lat: near?.latitude, lon: near?.longitude, limit: 10 })}`),
   reverse: (c: Coordinate) => request<{ place: Place | null }>(`/v1/places/reverse?${qs({ lat: c.latitude, lon: c.longitude })}`),
   place: (id: string) => request<{ place: Place | Facility; barriers: Barrier[] }>(`/v1/places/${encodeURIComponent(id)}`),
   facilities: (params: { benefit?: string; q?: string; near?: Coordinate | null }) => request<{ items: Facility[]; benefits: string[] }>(`/v1/facilities?${qs({ benefit: params.benefit, q: params.q, lat: params.near?.latitude, lon: params.near?.longitude })}`),
-  route: (origin: Coordinate, destination: Coordinate, preferences: Preferences) => request<RouteResult>('/v1/routes', { method: 'POST', body: JSON.stringify({ origin, destination, preferences }) }),
-  edge: (id: string, preferences: Preferences) => request<{ segment: RouteSegment; evaluation: { excluded: boolean; reason: string | null; factor: number | null }; tags: Record<string, string>; osm: { wayId: number; version: number | null; timestamp: string | null } }>(`/v1/edges/${encodeURIComponent(id)}?${qs(preferences as unknown as Record<string, string | number | boolean>)}`),
+  route: (origin: Coordinate, destination: Coordinate, preferences: Preferences, waypoints: Coordinate[] = []) => request<RouteResult>('/v1/routes', { method: 'POST', body: JSON.stringify({ origin, destination, waypoints, preferences }) }),
+  edge: (id: string, preferences: Preferences) => request<{
+    segment: RouteSegment;
+    evaluation: { excluded: boolean; reason: string | null; factor: number | null };
+    facts: { id: string; label: string; value: string; tone: 'ok' | 'warn' | 'muted' | 'info' | 'danger'; via: string }[];
+    coverage: { known: number; total: number; label: string };
+    terrain: { inclinePct: number | null; riseM: number | null; startM: number | null; endM: number | null; source: string; warning: string } | null;
+    tags: Record<string, string>;
+    osm: { wayId: number; version: number | null; timestamp: string | null };
+  }>(`/v1/edges/${encodeURIComponent(id)}?${qs(preferences as unknown as Record<string, string | number | boolean>)}`),
   barriersInBbox: (bbox: [number, number, number, number], includeResolved = false) => request<{ items: Barrier[] }>(`/v1/barriers?${qs({ bbox: bbox.join(','), includeResolved })}`),
   barriersNear: (c: Coordinate, radius = 500) => request<{ items: Barrier[] }>(`/v1/barriers?${qs({ lat: c.latitude, lon: c.longitude, radius })}`),
   barrier: (id: string) => request<{ barrier: Barrier }>(`/v1/barriers/${id}`),

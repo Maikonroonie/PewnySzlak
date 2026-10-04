@@ -48,19 +48,17 @@ export default function BarrierScreen() {
       <Row wrap>
         <Badge text={stateLabels[barrier.state]} tone={stateTone(barrier.state)} />
         <Badge text={barrierTypeLabels[barrier.type]} tone="info" />
-        {barrier.blocksRouting ? <Badge text="Blokuje trasy" tone="danger" /> : <Badge text="Nie blokuje – ostrzeżenie" tone="muted" />}
-        {barrier.isDemo ? <Badge text="DANE DEMO" tone="warn" /> : null}
-        {verified ? <Badge text="Zweryfikowana przez operatora" tone="ok" /> : <Badge text="Bez formalnej weryfikacji" tone="warn" />}
+        {barrier.blocksRouting ? <Badge text="Blokuje" tone="danger" /> : <Badge text="Ostrzeżenie" tone="muted" />}
+        {barrier.isDemo ? <Badge text="Demo" tone="warn" /> : null}
+        {verified ? <Badge text="Zweryfikowana" tone="ok" /> : null}
       </Row>
       {barrier.description ? <P style={{ marginTop: spacing(1) }}>{barrier.description}</P> : null}
 
       <Card style={{ marginTop: spacing(1) }}>
-        <P style={{ fontWeight: '700' }}>Co o tym wiemy</P>
-        <Small>Potwierdzeń: {barrier.confirmationCount} · zaprzeczeń: {barrier.rejectionCount} · „zniknęła”: {barrier.resolvedCount}</Small>
-        <Small>Ostatnia obserwacja w terenie: {observed ? formatDate(observed) : 'brak – informacja pochodzi tylko z rejestru/mapy'}</Small>
-        <Small>Zgłoszono: {formatDate(barrier.createdAt)} · aktualizacja wpisu: {formatDate(barrier.updatedAt)}</Small>
-        {barrier.validFrom || barrier.validUntil ? <Small>Przewidywany okres: {formatDate(barrier.validFrom)} – {barrier.validUntil ? formatDate(barrier.validUntil) : 'nieznany'}</Small> : null}
-        <Small style={{ marginTop: 4 }}>Potwierdzenia użytkowników zwiększają wiarygodność, ale nie są formalną weryfikacją – tę może nadać tylko operator.</Small>
+        <Small>Potwierdzenia: {barrier.confirmationCount} · zaprzeczenia: {barrier.rejectionCount} · zniknęła: {barrier.resolvedCount}</Small>
+        <Small>Teren: {observed ? formatDate(observed) : 'brak'}</Small>
+        <Small>Dodano: {formatDate(barrier.createdAt)} · aktualizacja: {formatDate(barrier.updatedAt)}</Small>
+        {barrier.validFrom || barrier.validUntil ? <Small>Okres: {formatDate(barrier.validFrom)} – {barrier.validUntil ? formatDate(barrier.validUntil) : '?'}</Small> : null}
       </Card>
 
       {barrier.coordinate ? <MapView style={{ height: 220 }} center={barrier.coordinate} zoom={17} barriers={[barrier]} reduceMotion={reduceMotion} accessibilityLabel={`Mapa z położeniem bariery: ${barrier.title}`} /> : null}
@@ -68,17 +66,17 @@ export default function BarrierScreen() {
       <H2>Źródła</H2>
       <EvidenceList evidence={barrier.evidence} />
 
-      <H2>Czy to się zgadza?</H2>
-      <Small style={{ marginBottom: spacing(1) }}>Odpowiedz tylko, jeśli byłeś/-aś na miejscu. Jedna odpowiedź na urządzenie.</Small>
+      <H2>Na miejscu?</H2>
+      <Small style={{ marginBottom: spacing(1) }}>Jedna odpowiedź na urządzenie.</Small>
       {done ? <Notice tone="ok" title={done} /> : null}
       {fbError ? <Notice tone="danger" title="Nie udało się zapisać" text={fbError.message} /> : null}
       <Row wrap>
-        <Button title="Potwierdzam – jest" variant="secondary" loading={fb.isPending && fb.variables === 'confirm'} disabled={fb.isPending} onPress={() => fb.mutate('confirm')} testID="feedback-confirm" />
-        <Button title="Nie ma takiej przeszkody" variant="secondary" loading={fb.isPending && fb.variables === 'reject'} disabled={fb.isPending} onPress={() => fb.mutate('reject')} />
+        <Button title="Jest" variant="secondary" loading={fb.isPending && fb.variables === 'confirm'} disabled={fb.isPending} onPress={() => fb.mutate('confirm')} testID="feedback-confirm" />
+        <Button title="Nie ma" variant="secondary" loading={fb.isPending && fb.variables === 'reject'} disabled={fb.isPending} onPress={() => fb.mutate('reject')} />
         <Button title="Już usunięta" variant="secondary" loading={fb.isPending && fb.variables === 'resolved'} disabled={fb.isPending} onPress={() => fb.mutate('resolved')} />
       </Row>
       <Row wrap style={{ marginTop: spacing(2) }}>
-        {barrier.coordinate ? <Button title="Trasa omijająca stąd" variant="ghost" onPress={() => router.replace('/')} /> : null}
+        {barrier.coordinate ? <Button title="Omijaj stąd" variant="ghost" onPress={() => router.replace('/')} /> : null}
         <Button title="Wróć" variant="secondary" onPress={() => router.back()} />
       </Row>
     </Screen>

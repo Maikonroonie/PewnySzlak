@@ -19,7 +19,9 @@
     "android": "npm run android --workspace=@pewnyszlak/mobile",
     "sync": "npm run sync --workspace=@pewnyszlak/api",
     "test:e2e": "playwright test",
-    "test:e2e:report": "playwright show-report"
+    "test:e2e:report": "playwright show-report",
+    "dev:launch": "serve apps/mobile/public/launch -l 8090 -n",
+    "test:launch": "playwright test --config playwright.launch.config.ts"
   },
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",

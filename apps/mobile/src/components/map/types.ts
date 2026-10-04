@@ -1,13 +1,16 @@
 import { segmentDifficulty } from '../../lib/route-preview';
-import type { Barrier, Coordinate, RouteResult } from '@pewnyszlak/domain';
+import type { Barrier, ComfortEdge, Coordinate, RouteResult } from '@pewnyszlak/domain';
 
 export const MAP_STYLE_URL = process.env.EXPO_PUBLIC_MAP_STYLE_URL ?? 'https://tiles.openfreemap.org/styles/liberty';
-export const MAP_ATTRIBUTION = process.env.EXPO_PUBLIC_MAP_ATTRIBUTION ?? 'Mapa: © OpenFreeMap · © OpenMapTiles · dane © autorzy OpenStreetMap (ODbL)';
+export const MAP_ATTRIBUTION = process.env.EXPO_PUBLIC_MAP_ATTRIBUTION ?? 'Mapa: © OpenFreeMap · © OpenMapTiles · dane © autorzy OpenStreetMap (ODbL). Wygląd inspirowany Apple Maps (to nie jest MapKit).';
+/** Krótka atrybucja na mapie (pełny tekst na ekranie Źródła). */
+export const MAP_ATTRIBUTION_SHORT = '© OpenFreeMap · OpenMapTiles · OSM';
 
-export type MapMarker = { id: string; coordinate: Coordinate; kind: 'origin' | 'destination' | 'user' | 'pin' };
+export type MapMarker = { id: string; coordinate: Coordinate; kind: 'origin' | 'destination' | 'user' | 'pin' | 'waypoint'; label?: string };
 
 export type MapProps = {
   route?: RouteResult | null;
+  comfortEdges?: ComfortEdge[];
   barriers?: Barrier[];
   markers?: MapMarker[];
   /** Ramka do pokazania (minLon, minLat, maxLon, maxLat); ma pierwszeństwo przed center. */
@@ -24,6 +27,7 @@ export type MapProps = {
   onPress?: (c: Coordinate) => void;
   onBarrierPress?: (b: Barrier) => void;
   onSegmentPress?: (segmentId: string) => void;
+  onMarkerPress?: (markerId: string) => void;
   /** Tekst alternatywny mapy dla czytników ekranu. */
   accessibilityLabel: string;
   style?: object;
@@ -38,6 +42,18 @@ export function routeFeatures(route: RouteResult): GeoJSON.FeatureCollection {
       id: s.id,
       properties: { segmentId: s.id, uncertain: s.uncertain, difficult: segmentDifficulty(s).length > 0, kind: s.kind, name: s.name },
       geometry: s.geometry,
+    })),
+  };
+}
+
+export function comfortFeatures(edges: ComfortEdge[]): GeoJSON.FeatureCollection {
+  return {
+    type: 'FeatureCollection',
+    features: edges.map((e) => ({
+      type: 'Feature',
+      id: e.id,
+      properties: { edgeId: e.id, status: e.status, reason: e.reason, name: e.name },
+      geometry: e.geometry,
     })),
   };
 }
@@ -57,9 +73,19 @@ export function barrierFeatures(barriers: Barrier[]): GeoJSON.FeatureCollection 
 export function markerFeatures(markers: MapMarker[]): GeoJSON.FeatureCollection {
   return {
     type: 'FeatureCollection',
-    features: markers.map((m) => ({ type: 'Feature', id: m.id, properties: { kind: m.kind, label: m.kind === 'origin' ? 'A' : m.kind === 'destination' ? 'B' : '' }, geometry: { type: 'Point', coordinates: [m.coordinate.longitude, m.coordinate.latitude] } })),
+    features: markers.map((m) => ({
+      type: 'Feature',
+      id: m.id,
+      properties: {
+        markerId: m.id,
+        kind: m.kind,
+        label: m.label ?? (m.kind === 'origin' ? 'S' : m.kind === 'destination' ? 'C' : m.kind === 'waypoint' ? 'P' : ''),
+      },
+      geometry: { type: 'Point', coordinates: [m.coordinate.longitude, m.coordinate.latitude] },
+    })),
   };
 }
 
-export const barrierColorExpr = ['match', ['get', 'state'], 'active', '#D74B3E', 'potential', '#B26A00', 'disputed', '#6B21A8', 'resolved', '#4B5563', '#4B5563'] as const;
-export const markerColorExpr = ['match', ['get', 'kind'], 'origin', '#1B6B3A', 'destination', '#254F3E', 'user', '#387259', '#14171A'] as const;
+export const barrierColorExpr = ['match', ['get', 'state'], 'active', '#FF3B30', 'potential', '#FF9F0A', 'disputed', '#BF5AF2', 'resolved', '#8E8E93', '#8E8E93'] as const;
+export const markerColorExpr = ['match', ['get', 'kind'], 'origin', '#34C759', 'destination', '#007AFF', 'user', '#111111', 'waypoint', '#FF9F0A', '#111111'] as const;
+export const comfortColorExpr = ['match', ['get', 'status'], 'ok', '#34C759', 'uncertain', '#FF9F0A', 'excluded', '#FF3B30', '#8E8E93'] as const;

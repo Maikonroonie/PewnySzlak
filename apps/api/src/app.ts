@@ -4,13 +4,17 @@ import rateLimit from '@fastify/rate-limit';
 import Fastify, { type FastifyInstance, type FastifyReply, type FastifyRequest } from 'fastify';
 import { z } from 'zod';
 import {
-  assistantRequestSchema, dataModeSchema, feedbackRequestSchema, preferencesSchema, reportRequestSchema, routeRequestSchema,
+  assistantRequestSchema, dataModeSchema, exploreRequestSchema, feedbackRequestSchema, preferencesSchema, reportRequestSchema, routeRequestSchema,
   type ApiError, type DataMode, type Place, type RouteSegment,
 } from '@pewnyszlak/domain';
 import { AssistantService } from './assistant/service.ts';
 import { config } from './config.ts';
 import type { AppContext } from './context.ts';
 import { evaluateEdge } from './graph/cost.ts';
+import { accessibilityCoverage, edgeFacts } from './graph/edge-facts.ts';
+import { exploreAround } from './graph/explore.ts';
+import { nearbyHeritage } from './places/msip-heritage.ts';
+import { mergeVerifiedPlaces } from './demo/verified-places.ts';
 import { haversineM } from './graph/geo.ts';
 import { buildRoute, osmWayEvidence } from './graph/route.ts';
 import { sourcesStatus } from './sources/status.ts';
@@ -104,9 +108,31 @@ export async function buildApp(ctx: AppContext): Promise<FastifyInstance> {
     if (!ctx.graph) return fail(reply, 503, 'NO_GRAPH', 'Graf nie został jeszcze zaimportowany – routing niedostępny.');
     const body = routeRequestSchema.parse(req.body);
     const mode = modeOf(req);
-    const result = buildRoute(ctx.graph, ctx.layer.forMode(mode), body.origin, body.destination, body.preferences, mode);
+    const result = buildRoute(ctx.graph, ctx.layer.forMode(mode), body.origin, body.destination, body.preferences, mode, body.waypoints);
     if (!result.ok) return fail(reply, 422, 'NO_ROUTE', result.details.details.explanation, result.details.details);
     return result.route;
+  });
+
+  // --- odkrywanie okolicy (comfort-first, bez celu) ---
+  app.post('/v1/explore', { config: { rateLimit: { max: Math.max(30, Math.floor(config.rateLimits.routesPerMinute / 2)), timeWindow: '1 minute' } } }, async (req, reply) => {
+    if (!ctx.graph) return fail(reply, 503, 'NO_GRAPH', 'Graf nie został jeszcze zaimportowany.');
+    const body = exploreRequestSchema.parse(req.body);
+    const mode = modeOf(req);
+    const near = { lon: body.origin.longitude, lat: body.origin.latitude };
+    // OSM atrakcje + udogodnienia + zabytki MSIP + overlay sprawdzonych + bariery
+    const sightLimit = body.radiusM >= 8_000 ? 40 : body.radiusM >= 3_000 ? 30 : 22;
+    const [places, amenities, heritage, barriers] = await Promise.all([
+      ctx.places.nearbySights(near.lon, near.lat, body.radiusM, sightLimit),
+      ctx.places.nearbyAmenities(near.lon, near.lat, Math.min(body.radiusM, 2_000), 12),
+      nearbyHeritage(near.lon, near.lat, Math.min(body.radiusM, 3_000)),
+      ctx.barriers.near(near.lon, near.lat, Math.min(body.radiusM, 900), mode === 'demo'),
+    ]);
+    const merged = mergeVerifiedPlaces(
+      [...places, ...amenities, ...heritage].sort((a, b) => (a.distanceM ?? 0) - (b.distanceM ?? 0)),
+      near,
+      body.radiusM,
+    ).slice(0, body.radiusM >= 8_000 ? 64 : 48);
+    return exploreAround(ctx.graph, ctx.layer.forMode(mode), body, merged, barriers);
   });
 
   // --- szczegóły odcinka (po identyfikatorze krawędzi OSM way:seg) ---
@@ -117,12 +143,62 @@ export async function buildApp(ctx: AppContext): Promise<FastifyInstance> {
     const edge = ctx.graph.edge(id);
     if (!edge) return fail(reply, 404, 'NOT_FOUND', 'Nie znaleziono odcinka.');
     const mode = modeOf(req);
-    const ev = evaluateEdge(edge, prefs, ctx.layer.forMode(mode));
+    const layer = ctx.layer.forMode(mode);
+    const ev = evaluateEdge(edge, prefs, layer);
+    const mid = edge.coords[Math.floor(edge.coords.length / 2)]!;
+    const nearBarriers = await ctx.barriers.near(mid[0], mid[1], 45, mode === 'demo');
+    const barriers = [...new Map([...ev.barriers, ...nearBarriers].map((b) => [b.id, b])).values()];
+    const evidenceBase = [osmWayEvidence(edge, ctx.graph), ...barriers.flatMap((b) => b.evidence)];
     const segment: RouteSegment = {
       id: edge.id, edgeIds: [edge.id], wayIds: [edge.wayId], name: edge.name ?? '', kind: edge.attrs.kind, geometry: { type: 'LineString', coordinates: edge.coords }, lengthM: Math.round(edge.lengthM * 10) / 10,
-      accessibility: edge.attrs.access, estimatedFields: edge.attrs.estimated, missingFields: edge.attrs.missing, uncertain: ev.uncertain, evidence: [osmWayEvidence(edge, ctx.graph), ...ev.barriers.flatMap((b) => b.evidence)], barriers: ev.barriers, warnings: ev.warnings,
+      accessibility: edge.attrs.access, estimatedFields: edge.attrs.estimated, missingFields: edge.attrs.missing, uncertain: ev.uncertain, evidence: evidenceBase, barriers, warnings: ev.warnings,
     };
-    return { segment, evaluation: { excluded: ev.excluded, reason: ev.reason, factor: Number.isFinite(ev.factor) ? ev.factor : null }, tags: edge.tags, osm: { wayId: edge.wayId, version: edge.osmVersion, timestamp: edge.osmTimestamp } };
+    const facts = edgeFacts(edge.tags, edge.attrs);
+    const coverage = accessibilityCoverage(edge.attrs.access, edge.attrs.missing);
+
+    let terrain: { inclinePct: number | null; riseM: number | null; startM: number | null; endM: number | null; source: string; warning: string } | null = null;
+    if (edge.attrs.access.incline == null && edge.coords.length >= 2) {
+      try {
+        const a = edge.coords[0]!;
+        const b = edge.coords[edge.coords.length - 1]!;
+        const profile = await Promise.race([
+          terrainProfile([{ longitude: a[0], latitude: a[1] }, { longitude: b[0], latitude: b[1] }]),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 3500)),
+        ]);
+        if (profile) {
+          const z0 = profile.points[0]?.elevationM ?? null;
+          const z1 = profile.points[1]?.elevationM ?? null;
+          const run = Math.max(1, edge.lengthM);
+          const rise = z0 != null && z1 != null ? z1 - z0 : null;
+          const inclinePct = rise != null ? Math.round((Math.abs(rise) / run) * 1000) / 10 : null;
+          terrain = {
+            inclinePct,
+            riseM: rise != null ? Math.round(rise * 10) / 10 : null,
+            startM: z0,
+            endM: z1,
+            source: profile.source,
+            warning: 'Szacunek z NMT (powierzchnia gruntu) – nie opisuje chodnika, schodów ani mostów. Nie zastępuje pomiaru w terenie.',
+          };
+          if (inclinePct != null) {
+            facts.push({ id: 'nmt-incline', label: 'Nachylenie terenu (NMT)', value: `ok. ${inclinePct}% (Δ ${rise! >= 0 ? '+' : ''}${terrain.riseM} m na ${Math.round(run)} m)`, tone: inclinePct > 6 ? 'warn' : 'info', via: 'GUGiK NMT' });
+          }
+        }
+      } catch { /* NMT opcjonalne */ }
+    }
+
+    const interestingTags = Object.fromEntries(
+      Object.entries(edge.tags).filter(([k]) => !['source', 'source:geometry', 'created_by', 'check_date'].includes(k)).slice(0, 40),
+    );
+
+    return {
+      segment,
+      evaluation: { excluded: ev.excluded, reason: ev.reason, factor: Number.isFinite(ev.factor) ? ev.factor : null },
+      facts,
+      coverage,
+      terrain,
+      tags: interestingTags,
+      osm: { wayId: edge.wayId, version: edge.osmVersion, timestamp: edge.osmTimestamp },
+    };
   });
 
   // --- bariery ---

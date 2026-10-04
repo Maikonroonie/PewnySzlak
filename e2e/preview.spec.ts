@@ -6,11 +6,12 @@ test('editorial desktop, real route, 3D preview play/pause/seek and reduced moti
   const errors: string[] = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Dokąd chcesz dojść?' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Poznaj Kraków według komfortu' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Przełącz mapę na 2D' })).toBeVisible();
   await axeCheck(page, 'editorial-desktop');
   await page.screenshot({ path: 'docs/screens/08-redesign-desktop.png' });
   await choosePlace(page, 'Początek trasy', 'Rynek Główny 1', /Rynek Główny 1/);
+  await page.getByRole('button', { name: 'Trasa do celu' }).click();
   await choosePlace(page, 'Cel', 'Wawel', /Wawel/);
   await page.getByTestId('plan-route').click();
   await expect(page.getByTestId('screen-route')).toBeVisible({ timeout: 30_000 });
@@ -36,10 +37,11 @@ test('editorial desktop, real route, 3D preview play/pause/seek and reduced moti
 test('phone layout has no horizontal overflow and preserves full text route', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/');
-  await expect(page.getByRole('heading', { name: 'Dokąd chcesz dojść?' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Poznaj Kraków według komfortu' })).toBeVisible();
   await page.screenshot({ path: 'docs/screens/10-redesign-mobile.png' });
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await choosePlace(page, 'Początek trasy', 'Rynek Główny 1', /Rynek Główny 1/);
+  await page.getByRole('button', { name: 'Trasa do celu' }).click();
   await choosePlace(page, 'Cel', 'Wawel', /Wawel/);
   await page.getByTestId('plan-route').click();
   await expect(page.getByTestId('screen-route')).toBeVisible({ timeout: 30_000 });

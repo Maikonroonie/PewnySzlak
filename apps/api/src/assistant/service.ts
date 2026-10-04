@@ -2,7 +2,49 @@ import type { AssistantAction, AssistantRequest, AssistantResponse, Evidence, Fa
 import { DEFAULT_PREFERENCES, formatDistance, formatDuration } from '@pewnyszlak/domain';
 import { config } from '../config.ts';
 import type { AppContext } from '../context.ts';
+import { haversineM } from '../graph/geo.ts';
 import { describeEvidence, runTool, toolDefinitions, toolSchemas, type ToolContext, type ToolName } from './tools.ts';
+
+/** Demo: kilka realnych lokali burgerowych w Krakowie (gdy OSM zwraca same sieciówki). */
+const DEMO_BURGERS: { name: string; address: string; latitude: number; longitude: number }[] = [
+  { name: 'Pasibus', address: 'ul. Szewska 23, Kraków', latitude: 50.06295, longitude: 19.93485 },
+  { name: 'Bobby Burger', address: 'ul. Pawia 5, Kraków', latitude: 50.06775, longitude: 19.94555 },
+  { name: 'Meat Love', address: 'ul. Krakowska 19, Kraków', latitude: 50.04985, longitude: 19.94435 },
+];
+
+function demoBurgerPlaces(from: { latitude: number; longitude: number } | null): Place[] {
+  const now = new Date().toISOString();
+  return DEMO_BURGERS.map((b, i) => {
+    const distanceM = from
+      ? Math.round(haversineM(from.longitude, from.latitude, b.longitude, b.latitude))
+      : undefined;
+    const evidence: Evidence[] = [{
+      id: `demo-burger-${i}`,
+      source: 'demo',
+      sourceId: `burger-${i}`,
+      sourceUrl: null,
+      updatedAt: null,
+      fetchedAt: now,
+      observedAt: null,
+      status: 'mapped',
+      isStale: false,
+      description: 'Propozycja demonstracyjna lokalu (hardkod pod demo). Nie jest oceną dostępności.',
+    }];
+    return {
+      id: `demo-burger-${i}`,
+      name: b.name,
+      kind: 'place' as const,
+      category: 'amenity=fast_food',
+      address: b.address,
+      coordinate: { latitude: b.latitude, longitude: b.longitude },
+      accessibility: {},
+      amenities: { ramp: null, toilet: null, elevator: null, carPark: null, rest: null },
+      evidence,
+      entranceVerified: false,
+      ...(distanceM != null ? { distanceM } : {}),
+    };
+  }).sort((a, b) => (a.distanceM ?? 0) - (b.distanceM ?? 0));
+}
 
 export const DISCLAIMER = 'Asystent nie potwierdza dostępności. Podaje wyłącznie to, co wynika z danych (OSM, NFZ, przetargi, zgłoszenia) wraz ze źródłem, datą i statusem wiarygodności. Brak informacji nie oznacza braku barier.';
 
@@ -46,6 +88,117 @@ export class AssistantService {
       const s = out.result as Awaited<ReturnType<typeof runTool>>['result'] & { sources: { name: string; state: string; lastSuccessAt: string | null; recordCount: number }[]; graphVersion: string | null };
       const lines = s.sources.map((x) => `• ${x.name}: ${x.state === 'available' ? 'dostępne' : x.state === 'stale' ? 'nieaktualne' : x.state === 'unavailable' ? 'NIEDOSTĘPNE – używamy ostatnich zapisanych danych' : 'jeszcze nie pobrane'}${x.lastSuccessAt ? `, ostatnio ${x.lastSuccessAt.slice(0, 10)}` : ''}, rekordów: ${x.recordCount}`);
       return { ...base, message: `Stan źródeł (graf ${s.graphVersion ?? 'brak'}):\n${lines.join('\n')}\n\nKażda informacja w aplikacji ma źródło, datę i status. Dane niepotwierdzone nie są prezentowane jako zapewnienie dostępności.`, actions: [{ type: 'open-sources', label: 'Pokaż szczegóły źródeł' }] };
+    }
+
+    if (/(jedzeni|restaur|pizza|burger|włosk|wlosk|azjat|sushi|kebab|kawiarn|cafe|kawa|fast.?food)/.test(msg)) {
+      const query =
+        /pizza/.test(msg) ? 'pizza'
+          : /burger/.test(msg) ? 'burger'
+            : /(włosk|wlosk|italian)/.test(msg) ? 'wloska'
+              : /(azjat|sushi|ramen|thai|chino)/.test(msg) ? 'sushi'
+                : /(kawiarn|cafe|kawa)/.test(msg) ? 'kawiarnia'
+                  : /kebab/.test(msg) ? 'kebab'
+                    : null;
+      // Burgery: hardkod 3 konkretnych lokali pod demo (OSM często zwraca same sieciówki).
+      if (query === 'burger') {
+        const list = demoBurgerPlaces(t.coordinate);
+        const lines = list.map((p, i) => `${i + 1}. ${p.name}${p.address ? ` – ${p.address}` : ''}${p.distanceM != null ? ` · ${formatDistance(p.distanceM)}` : ''}`);
+        return {
+          ...base,
+          message: `Trzy propozycje burgerów w Krakowie${t.coordinate ? ' (od najbliższego do Twojego startu)' : ''}:\n${lines.join('\n')}\n\nWybierz lokal, a aplikacja wyznaczy trasę według Twoich limitów.`,
+          places: list,
+          citations: list.flatMap((p) => p.evidence),
+          actions: list.filter((p) => p.coordinate).map((p) => ({ type: 'route-to' as const, label: `Trasa: ${p.name}`, destination: p.coordinate!, placeName: p.name })),
+          suggestedDestination: list.find((p) => p.coordinate)?.coordinate ?? null,
+        };
+      }
+
+      if (!t.coordinate) {
+        return {
+          ...base,
+          message: 'Ustaw punkt startu na ekranie głównym — wtedy znajdę najbliższe lokale od Twojej pozycji (z mapy OSM).',
+          actions: [{ type: 'open-explore', label: 'Odkryj okolice' }],
+        };
+      }
+      // Najbliższe lokale od startu (dystans), nie „najlepsze dopasowanie nazwy”.
+      const radiusM = query === 'pizza' || query === 'kebab' ? 4_000 : 3_000;
+      let list = await t.ctx.places.nearbyFood(t.coordinate.longitude, t.coordinate.latitude, radiusM, 8, query);
+      if (list.length < 3 && query) {
+        const broader = await t.ctx.places.nearbyFood(t.coordinate.longitude, t.coordinate.latitude, radiusM, 8, null);
+        const seen = new Set(list.map((p) => p.id));
+        for (const p of broader) {
+          if (seen.has(p.id)) continue;
+          list.push(p);
+          if (list.length >= 8) break;
+        }
+      }
+      list = list.slice(0, 5);
+      if (list.length === 0) {
+        return {
+          ...base,
+          message: `W promieniu ${formatDistance(radiusM)} od startu nie mam lokali${query ? ` typu „${query}”` : ''} w danych OSM. Zwiększ zasięg startu albo wpisz nazwę lokalu.`,
+          actions: [{ type: 'open-explore', label: 'Odkryj okolice' }],
+        };
+      }
+      const label = query ?? 'jedzenie';
+      const lines = list.map((p, i) => `${i + 1}. ${p.name}${p.address ? ` – ${p.address}` : ''}${p.distanceM != null ? ` · ${formatDistance(p.distanceM)}` : ''}`);
+      return {
+        ...base,
+        message: `Najbliższe (${label}) od Twojego startu — kolejność według odległości, nie jakości:\n${lines.join('\n')}\n\nWybierz lokal, a aplikacja wyznaczy trasę według Twoich limitów.`,
+        places: list,
+        citations: list.flatMap((p) => p.evidence),
+        actions: list.filter((p) => p.coordinate).slice(0, 3).map((p) => ({ type: 'route-to' as const, label: `Trasa: ${p.name.slice(0, 36)}`, destination: p.coordinate!, placeName: p.name })),
+        suggestedDestination: list.find((p) => p.coordinate)?.coordinate ?? null,
+      };
+    }
+
+    if (/(odkryj|co .*w okolicy|dla wózka|komfort.*okol)/.test(msg)) {
+      return {
+        ...base,
+        message: 'Odkrywanie okolicy pokazuje zabytki, muzea, parki i sprawdzone miejsca wokół startu oraz sieć chodników dopasowaną do Twoich limitów wózka. Nie potwierdza dostępności – pokazuje, co wynika z danych (OSM, MSIP, weryfikacja operatora).',
+        actions: [{ type: 'open-explore', label: 'Odkryj okolice' }, { type: 'open-preferences', label: 'Moje limity' }],
+      };
+    }
+
+    if (/(toalet|wc|łazienk|lazienk)/.test(msg)) {
+      const out = await runTool('search_places', { query: 'toaleta', limit: 5 }, t);
+      const toilets = out.places.filter((p) => /toilet|toalet/i.test(`${p.name} ${p.category ?? ''}`) || p.amenities?.toilet === true);
+      if (toilets.length === 0 && t.coordinate) {
+        return {
+          ...base,
+          message: 'W indeksie OSM wokół Ciebie nie mam pewnych toalet. W Odkryj okolice włącz warstwę udogodnień albo zgłoś obserwację. Brak wpisu ≠ brak toalety.',
+          actions: [{ type: 'open-explore', label: 'Odkryj okolice' }],
+          citations: out.citations,
+        };
+      }
+      const list = (toilets.length ? toilets : out.places).slice(0, 4);
+      const lines = list.map((p, i) => `${i + 1}. ${p.name}${p.address ? ` – ${p.address}` : ''}${p.distanceM != null ? ` · ${formatDistance(p.distanceM)}` : ''}`);
+      return {
+        ...base,
+        message: `Toalety / miejsca z tagiem toalety (dane mapy, nie gwarancja):\n${lines.join('\n')}\n\nSprawdź kartę miejsca przed wizytą.`,
+        places: list,
+        citations: out.citations,
+        actions: [
+          ...list.filter((p) => p.coordinate).slice(0, 3).map((p) => ({ type: 'route-to' as const, label: `Trasa: ${p.name.slice(0, 36)}`, destination: p.coordinate!, placeName: p.name })),
+          { type: 'open-explore', label: 'Odkryj okolice' },
+        ],
+        suggestedDestination: list.find((p) => p.coordinate)?.coordinate ?? null,
+      };
+    }
+
+    if (/(omija.*remont|remont.*omija|grodzk)/.test(msg) && t.coordinate) {
+      const out = await runTool('barriers_near', { latitude: t.coordinate.latitude, longitude: t.coordinate.longitude, radiusM: 1200 }, t);
+      const barriers = (out.result as { barriers: { title: string; state: string; evidence: string[]; isDemo: boolean }[] }).barriers;
+      const remont = barriers.filter((b) => /remont|robot|grodz/i.test(b.title));
+      const lines = (remont.length ? remont : barriers).slice(0, 5).map((b) => `• ${b.title} (${b.state}${b.isDemo ? ', DEMO' : ''})`);
+      return {
+        ...base,
+        message: lines.length
+          ? `Sygnały o remontach / robotach w pobliżu:\n${lines.join('\n')}\n\nTrasa A→B omija aktywne blokady przypisane do odcinków. Włącz tryb Demo, by zobaczyć remont Grodzkiej.`
+          : 'Nie mam sygnału o aktywnym remoncie w pobliżu. To nie gwarantuje braku robót – sprawdź Odkryj / Źródła.',
+        citations: out.citations,
+        actions: [{ type: 'open-explore', label: 'Odkryj okolice' }, { type: 'open-sources', label: 'Źródła danych' }],
+      };
     }
 
     if (/(rehabilit|przychodn|poradni|lekarz|nfz|placówk|placowk|fizjoter|ortoped|neurolog|szpital)/.test(msg)) {
@@ -103,8 +256,8 @@ export class AssistantService {
 
     return {
       ...base,
-      message: 'Działam bez modelu językowego (tryb regułowy). Mogę:\n• znaleźć najbliższą poradnię rehabilitacyjną NFZ („najbliższa rehabilitacja”),\n• wyszukać miejsce lub adres i zaproponować cel („trasa do Rynek Główny 1”),\n• pokazać bariery i sygnały w pobliżu („jakie bariery są w pobliżu”),\n• opisać stan i wiarygodność źródeł („skąd są dane”).\nTrasy wyznacza backend według Twoich preferencji; ja niczego nie potwierdzam.',
-      actions: [{ type: 'open-preferences', label: 'Moje preferencje' }, { type: 'open-sources', label: 'Źródła danych' }],
+      message: 'Działam bez modelu językowego (tryb regułowy). Mogę:\n• znaleźć jedzenie (pizza, burgery, włoskie…),\n• wskazać toaletę w danych mapy („toaleta blisko”),\n• sprawdzić remonty („czy omija remont”),\n• znaleźć poradnię NFZ („najbliższa rehabilitacja”),\n• zaproponować cel („trasa do Rynek Główny 1”),\n• opisać źródła („skąd są dane”).\nTrasy wyznacza backend według Twoich preferencji; ja niczego nie potwierdzam.',
+      actions: [{ type: 'open-explore', label: 'Odkryj okolice' }, { type: 'open-preferences', label: 'Moje preferencje' }, { type: 'open-sources', label: 'Źródła danych' }],
     };
   }
 

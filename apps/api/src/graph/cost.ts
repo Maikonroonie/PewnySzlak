@@ -43,16 +43,38 @@ export function evaluateEdge(edge: Edge, prefs: Preferences, layer: BarrierLayer
     if (prefs.avoidRoughSurface) return exclude(`trudna nawierzchnia (${acc.surface ?? acc.smoothness})`);
     factor *= SURFACE_FACTOR[2]!;
   } else if (a.surfaceClass === 1) {
+    // Rolki: kostka kamienna / bruk też jest wykluczona – komfort wymaga równej nawierzchni.
+    if (prefs.activity === 'skates' && prefs.avoidRoughSurface) {
+      return exclude(`nierówna nawierzchnia dla rolek (${acc.surface ?? acc.smoothness ?? 'kostka/bruk'})`);
+    }
     factor *= SURFACE_FACTOR[1]!;
     warnings.push('Nawierzchnia umiarkowanie trudna (np. kostka kamienna).');
   } else if (a.surfaceClass === -1) {
-    if (prefs.unknownPolicy === 'exclude' && a.kind !== 'elevator') return exclude('brak danych o nawierzchni');
-    factor *= UNKNOWN_SURFACE_FACTOR;
-    uncertain = true;
+    if (prefs.activity === 'skates' && prefs.avoidRoughSurface) {
+      // Bez danych o nawierzchni rolki traktujemy ostrożniej niż spacer.
+      if (prefs.unknownPolicy === 'exclude') return exclude('brak danych o nawierzchni (rolki)');
+      factor *= 1.55;
+      uncertain = true;
+      warnings.push('Brak danych o nawierzchni – dla rolek zakładamy ostrożność (brak danych ≠ równa droga).');
+    } else if (prefs.unknownPolicy === 'exclude' && a.kind !== 'elevator') return exclude('brak danych o nawierzchni');
+    else {
+      factor *= UNKNOWN_SURFACE_FACTOR;
+      uncertain = true;
+    }
+  }
+  if (prefs.activity === 'skates') {
+    const surf = (acc.surface ?? '').split(';')[0] ?? '';
+    if (surf === 'asphalt' || surf === 'concrete' || surf === 'paving_stones' || surf === 'concrete:plates') factor *= 0.85;
+    if (a.kind === 'cycleway') factor *= 0.75;
+  } else if (prefs.activity === 'bike') {
+    if (a.kind === 'cycleway') factor *= 0.72;
+    else if (a.kind === 'path' || a.kind === 'shared-road') factor *= 0.92;
+    else if (a.kind === 'footway' || a.kind === 'pedestrian') factor *= 1.18;
   }
   if (acc.incline !== null) {
     if (acc.incline > prefs.maxIncline) return exclude(`nachylenie ${acc.incline}% > ${prefs.maxIncline}%`);
-    factor *= 1 + acc.incline / 20;
+    const training = prefs.effort === 'hard' && prefs.activity !== 'wheelchair';
+    factor *= training ? 1 / (1 + acc.incline / 22) : 1 + acc.incline / (prefs.effort === 'easy' ? 10 : 20);
   } else if (a.kind !== 'elevator' && a.kind !== 'crossing') {
     // Brak danych o nachyleniu dotyczy niemal całej sieci (OSM nie ma modelu terenu) – zawsze oznaczamy, nigdy nie wykluczamy.
     factor *= UNKNOWN_INCLINE_FACTOR;

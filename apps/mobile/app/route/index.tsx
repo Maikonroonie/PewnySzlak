@@ -1,5 +1,5 @@
 import { Feather } from '@expo/vector-icons';
-import { formatDistance, formatDuration } from '@pewnyszlak/domain';
+import { formatDistance, formatDuration, type RouteSegment } from '@pewnyszlak/domain';
 import { useRouter } from 'expo-router';
 import React, { useMemo, useState } from 'react';
 import { Pressable, Text, View, useWindowDimensions } from 'react-native';
@@ -32,6 +32,13 @@ export default function RouteScreen() {
   const o = origin ?? lastRoute?.origin, d = destination ?? lastRoute?.destination;
   const difficult = route.segments.filter(s => segmentDifficulty(s).length > 0);
   const riskLength = difficult.reduce((sum, s) => sum + s.lengthM, 0);
+  const segCount = Math.max(1, route.segments.length);
+  const pctSeg = (pred: (s: RouteSegment) => boolean) => Math.round(100 * route.segments.filter(pred).length / segCount);
+  const osmCoverageLines = [
+    `Schody ${pctSeg(s => s.accessibility.steps != null)}% · krawężnik ${pctSeg(s => s.accessibility.kerbHeightCm != null)}% · nawierzchnia ${pctSeg(s => s.accessibility.surface != null)}%`,
+    `Szerokość ${pctSeg(s => s.accessibility.widthCm != null)}% · nachylenie OSM ${pctSeg(s => s.accessibility.incline != null)}%`,
+    `Odcinki niepewne: ${route.segments.filter(s => s.uncertain).length} · bariery na trasie: ${route.barriers.length}${route.avoidedBarriers.length ? ` · omijane: ${route.avoidedBarriers.length}` : ''}`,
+  ];
   const active = highlights.filter(h => h.progress <= (preview.progress ?? 0)).at(-1);
   const previewMarkers = [{ id: 'o', coordinate: route.originSnap.coordinate, kind: 'origin' as const }, { id: 'd', coordinate: route.destinationSnap.coordinate, kind: 'destination' as const }];
 
@@ -39,8 +46,8 @@ export default function RouteScreen() {
     <BrandBar back/>
     <Row wrap style={{ justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 22 }}>
       <View style={{ flex: 1, minWidth: 260 }}>
-        <Text style={{ fontSize: 11, color: colors.textMuted, letterSpacing: 2, fontWeight: '700', marginBottom: 10 }}>TWOJA DROGA PRZEZ MIASTO</Text>
-        <H1 ref={h1} nativeID="route-title" style={{ fontFamily: headingFont, fontSize: wide ? 46 : 34, fontWeight: '400', letterSpacing: -1.5 }}>{formatDistance(route.distanceM)} · {formatDuration(route.durationSeconds)}</H1>
+        <Text style={{ fontSize: 12, color: colors.textMuted, letterSpacing: 1.2, fontWeight: '700', marginBottom: 8 }}>TRASA</Text>
+        <H1 ref={h1} nativeID="route-title" style={{ fontFamily: headingFont, fontSize: wide ? 40 : 32, fontWeight: '800', letterSpacing: -1.1 }}>{formatDistance(route.distanceM)} · {formatDuration(route.durationSeconds)}</H1>
         <P muted style={{ fontSize: 15 }}>{o?.label ?? 'Start'} → {d?.label ?? 'Cel'}</P>
       </View>
       <Row wrap style={{ marginTop: 12 }}>{route.mode === 'demo' ? <Badge text="DEMO" tone="warn"/> : null}<Button title="Prowadź mnie" icon="◎" onPress={() => router.push('/route/guide')} testID="start-guidance"/><Button title="Widok tekstowy" icon="≡" variant="secondary" onPress={() => router.push('/route/text')} testID="open-text-view"/></Row>
@@ -52,7 +59,7 @@ export default function RouteScreen() {
           accessibilityLabel={`Mapa 3D. ${routeSummaryText(route)}. Czerwone odcinki mają rozpoznane utrudnienia, przerywane bursztynowe oznaczają niepełne dane. Przelot jest podglądem, a nie lokalizacją GPS.`}
           onSegmentPress={id => { preview.pause(); router.push(`/route/segment/${encodeURIComponent(id)}`); }} onBarrierPress={b => { preview.pause(); router.push(`/barrier/${b.id}`); }}/>
         <View style={{ backgroundColor: colors.paper, borderRadius: 22, padding: 18, marginTop: 12, borderWidth: 1, borderColor: colors.border }}>
-          <Row wrap style={{ justifyContent: 'space-between', marginBottom: 14 }}><View><Text style={{ fontWeight: '700', fontSize: 17, color: colors.text }}>Najpierw zobacz. Potem ruszaj.</Text><Small>Przelot 3D · podgląd bez użycia GPS</Small></View><Badge text={`${Math.round((preview.progress ?? 0) * 100)}% trasy`} tone="muted"/></Row>
+          <Row wrap style={{ justifyContent: 'space-between', marginBottom: 14 }}><View><Text style={{ fontWeight: '700', fontSize: 17, color: colors.text }}>Przelot 3D</Text><Small>Podgląd trasy — bez GPS</Small></View></Row>
           <View accessibilityRole="progressbar" accessibilityLabel="Postęp podglądu trasy" accessibilityValue={{ min: 0, max: 100, now: Math.round((preview.progress ?? 0) * 100) }} style={{ height: 5, backgroundColor: colors.surface, borderRadius: 3, marginBottom: 16 }}><View style={{ height: 5, width: `${(preview.progress ?? 0) * 100}%`, borderRadius: 3, backgroundColor: colors.primary }}/></View>
           <Row wrap>
             <Button title={preview.playing ? 'Wstrzymaj przelot' : preview.progress === 1 ? 'Odtwórz ponownie' : 'Odtwórz przelot 3D'} icon={preview.playing ? 'Ⅱ' : '▶'} onPress={preview.toggle} disabled={reduceMotion} testID="preview-play"/>
@@ -64,10 +71,14 @@ export default function RouteScreen() {
         </View>
       </View>
       <View style={{ width: wide ? 310 : undefined, gap: 14 }}>
-        <View style={{ backgroundColor: colors.sage, borderRadius: 24, padding: 22 }}><Feather name="compass" size={26} color={colors.primary}/><Text style={{ fontFamily: headingFont, fontSize: 30, color: colors.text, marginTop: 14, marginBottom: 8 }}>Warto wiedzieć\nprzed drogą.</Text><Small>{difficult.length ? `${formatDistance(riskLength)} z rozpoznanymi utrudnieniami.` : 'Brak rozpoznanych trudnych fragmentów.'} {formatDistance(route.unknownDistanceM)} z niepełnymi danymi.</Small></View>
+        <View style={{ backgroundColor: colors.paper, borderRadius: 24, padding: 18, borderWidth: 1, borderColor: colors.border, gap: 6 }}>
+          <Text style={{ fontWeight: '700', fontSize: 15, color: colors.text }}>Podsumowanie ryzyka</Text>
+          <Small>{difficult.length ? `${formatDistance(riskLength)} z rozpoznanymi utrudnieniami · ${difficult.length} odc.` : 'Brak odcinków z rozpoznanymi utrudnieniami.'}</Small>
+          <Small>{formatDistance(route.unknownDistanceM)} bez pełnych danych OSM (nawierzchnia / próg / szerokość).</Small>
+        </View>
         <View style={{ backgroundColor: colors.paper, borderRadius: 24, padding: 20, borderWidth: 1, borderColor: colors.border }}>
-          <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 1.5, color: colors.textMuted, marginBottom: 14 }}>ZBLIŻENIE NA TRASĘ</Text>
-          {highlights.length === 0 ? <Small>Nie znaleziono odcinków wymagających szczególnego wyróżnienia. Sprawdź również szczegóły i źródła poniżej.</Small> : highlights.map((h, i) => <Pressable key={h.id} accessibilityRole="button" accessibilityLabel={`Pokaż etap ${i + 1}: ${h.title}, ${h.name}`} onPress={() => { setSelected(h.segmentId); preview.seek(h.progress); }} style={s => [{ flexDirection: 'row', gap: 12, paddingVertical: 14, borderBottomWidth: i < highlights.length - 1 ? 1 : 0, borderColor: colors.border, borderRadius: 10, backgroundColor: selected === h.id ? colors.bg : 'transparent' }, focusRing(s)]}>
+          <Text style={{ fontSize: 11, fontWeight: '700', letterSpacing: 1.5, color: colors.textMuted, marginBottom: 14 }}>WAŻNE PUNKTY</Text>
+          {highlights.length === 0 ? <Small>Brak wyróżnionych odcinków — sprawdź listę poniżej.</Small> : highlights.map((h, i) => <Pressable key={h.id} accessibilityRole="button" accessibilityLabel={`Pokaż etap ${i + 1}: ${h.title}, ${h.name}`} onPress={() => { setSelected(h.segmentId); preview.seek(h.progress); }} style={s => [{ flexDirection: 'row', gap: 12, paddingVertical: 14, borderBottomWidth: i < highlights.length - 1 ? 1 : 0, borderColor: colors.border, borderRadius: 10, backgroundColor: selected === h.id ? colors.bg : 'transparent' }, focusRing(s)]}>
             <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: h.uncertain ? '#F5EBCF' : '#FAE2DB', alignItems: 'center', justifyContent: 'center' }}><Text style={{ color: h.uncertain ? colors.warn : colors.danger, fontSize: 12, fontWeight: '700' }}>{String(i + 1).padStart(2, '0')}</Text></View><View style={{ flex: 1 }}><Text style={{ color: h.uncertain ? colors.warn : colors.danger, fontSize: 14, fontWeight: '700' }}>{h.title}</Text><Small>{h.name}</Small><Small style={{ fontSize: 11 }}>Po {formatDistance(h.distanceM)} od startu</Small></View><Feather name="arrow-up-right" size={15} color={colors.textMuted}/>
           </Pressable>)}
         </View>
@@ -75,13 +86,26 @@ export default function RouteScreen() {
     </View>
     <Row wrap style={{ marginVertical: 18, gap: 20 }}><Legend color={colors.routeOk} label="Trasa"/><Legend color={colors.routeDifficult} label="Rozpoznane utrudnienie"/><Legend color={colors.routeUncertain} label="Brak danych / niepewność" dashed/></Row>
     <TerrainProfile route={route}/>
-    <Row wrap style={{ justifyContent: 'space-between', marginTop: 24 }}><H2>Co wiemy o tej drodze</H2><Button title="Zgłoś barierę na trasie" icon="⚑" variant="secondary" onPress={() => router.push({ pathname: '/report', params: { lat: String(route.geometry.coordinates[0]![1]), lon: String(route.geometry.coordinates[0]![0]), fromRoute: '1' } })}/></Row>
-    <Small style={{ marginBottom: 16 }}>Wyznaczono {formatDate(route.computedAt)}. Wszystkie kolory opisują dostępne dane, a nie gwarantowaną dostępność.</Small>
-    {route.warnings.map(w => <Notice key={w} tone="warn" title={w}/>)}
-    {!route.originSnap.verified || !route.destinationSnap.verified ? <Notice tone="info" title="Dojście do punktu końcowego niezweryfikowane" text={[route.originSnap.note, route.destinationSnap.note].filter(Boolean).join(' · ')}/> : null}
-    {route.avoidedBarriers.length ? <><H2>Trasa omija</H2>{route.avoidedBarriers.map(b => <BarrierCard key={b.id} barrier={b} onPress={() => router.push(`/barrier/${b.id}`)}/>)}</> : null}
-    {route.barriers.length ? <><H2>Na trasie – zachowaj ostrożność</H2>{route.barriers.map(b => <BarrierCard key={b.id} barrier={b} onPress={() => router.push(`/barrier/${b.id}`)}/>)}</> : null}
-    <H2>Odcinki trasy ({route.segments.length})</H2><Small style={{ marginBottom: 14 }}>Dotknij odcinka, aby sprawdzić jego parametry, źródła i daty.</Small>
+    <Card style={{ marginTop: 16, padding: 18 }}>
+      <Text style={{ fontWeight: '800', fontSize: 16, color: colors.text, marginBottom: 8 }}>Pokrycie danych OSM</Text>
+      <Small style={{ marginBottom: 10 }}>Udział odcinków z wpisem w OSM — nie gwarancja dostępności. Nachylenie terenu: profil NMT poniżej.</Small>
+      {osmCoverageLines.map((line, i) => <Small key={i}>{line}</Small>)}
+    </Card>
+    {(d?.placeId?.startsWith('msip-') || d?.placeId?.startsWith('verified-') || /zabytek|heritage|ewidencj/i.test(d?.label ?? '')) ? (
+      <Row wrap style={{ marginTop: 8 }}>
+        <Badge text={d?.placeId?.startsWith('msip-') ? 'Cel: zabytek (ewidencja MSIP)' : d?.placeId?.startsWith('verified-') ? 'Cel: sprawdzone w terenie' : 'Cel z mapy zabytków'} tone="ok" />
+      </Row>
+    ) : null}
+    <Row wrap style={{ justifyContent: 'space-between', marginTop: 24 }}><H2>Szczegóły trasy</H2><Button title="Zgłoś barierę na trasie" icon="⚑" variant="secondary" onPress={() => router.push({ pathname: '/report', params: { lat: String(route.geometry.coordinates[0]![1]), lon: String(route.geometry.coordinates[0]![0]), fromRoute: '1', quick: '1' } })}/></Row>
+    <Small style={{ marginBottom: 16 }}>Wyznaczono {formatDate(route.computedAt)}. Kolory = dostępne dane, nie gwarancja dostępności.</Small>
+    {route.warnings.map((w, i) => <Notice key={`rw-${i}`} tone="warn" title={w}/>)}
+    {!route.destinationSnap.verified ? (
+      <Notice tone="info" title="Dojście do drzwi niezweryfikowane" text={`Trasa kończy się na sieci pieszej OSM (~${Math.round(route.destinationSnap.distanceM)} m od wskazanego punktu). ${route.destinationSnap.note ?? ''} Wejście do budynku może wymagać dodatkowej weryfikacji.`.trim()} />
+    ) : null}
+    {!route.originSnap.verified ? <Notice tone="info" title="Start snapa niezweryfikowany" text={route.originSnap.note ?? 'Punkt startu daleko od chodnika w danych.'} /> : null}
+    {route.avoidedBarriers.length ? <><H2>Omijane bariery</H2>{route.avoidedBarriers.map(b => <BarrierCard key={b.id} barrier={b} compact onPress={() => router.push(`/barrier/${b.id}`)}/>)}</> : null}
+    {route.barriers.length ? <><H2>Bariery na trasie</H2>{route.barriers.map(b => <BarrierCard key={b.id} barrier={b} compact onPress={() => router.push(`/barrier/${b.id}`)}/>)}</> : null}
+    <H2>Odcinki ({route.segments.length})</H2><Small style={{ marginBottom: 14 }}>Dotknij, aby zobaczyć parametry i źródła.</Small>
     <View role="list">{route.segments.map((s, i) => <View key={s.id} role="listitem"><SegmentRow segment={s} index={i} onPress={() => router.push(`/route/segment/${encodeURIComponent(s.id)}`)}/></View>)}</View>
   </Screen>;
 }

@@ -111,6 +111,8 @@ export async function seedDemo(db: ReturnType<typeof createPool>, log: (m: strin
     log('5/5 przeszkoda rozwiązana');
   }
   log('Zestaw demo gotowy. Użyj nagłówka x-data-mode: demo (w aplikacji: przełącznik „Tryb demo”).');
+  const { VERIFIED_PLACE_SEEDS } = await import('./verified-places.ts');
+  log(`Overlay miejsc sprawdzonych w terenie: ${VERIFIED_PLACE_SEEDS.length} (Rynek) – ładowany przy /v1/explore.`);
 }
 
 async function main() {

@@ -1,9 +1,9 @@
 import { randomUUID } from 'node:crypto';
-import type { AccessibilityField, Barrier, Coordinate, DataMode, Evidence, Preferences, RouteInstruction, RouteResult, RouteSegment, Snap } from '@pewnyszlak/domain';
-import { surfaceLabels } from '@pewnyszlak/domain';
+import type { AccessibilityField, Barrier, Coordinate, DataMode, Evidence, Preferences, RouteInstruction, RouteLeg, RouteResult, RouteSegment, Snap } from '@pewnyszlak/domain';
+import { ACTIVITY_SPEED_MPS, surfaceLabels } from '@pewnyszlak/domain';
 import { barrierIsCurrent, type BarrierLayer } from '../barriers/layer.ts';
 import { config } from '../config.ts';
-import { astar, type PathStep, type SnapPoint } from './astar.ts';
+import { astar, resolveConnectedCoordinate, type PathStep, type SnapPoint } from './astar.ts';
 import { bearing, haversineM, pointToPolylineM, slicePolyline, turnAngle } from './geo.ts';
 import type { Edge, Graph } from './graph.ts';
 
@@ -14,6 +14,14 @@ export function isStale(updatedAt: string | null, now = Date.now()): boolean {
 }
 
 export function osmWayEvidence(edge: Edge, graph: Graph): Evidence {
+  const a = edge.attrs.access;
+  const bits = [
+    edge.name ? `„${edge.name}”` : null,
+    a.surface ? `nawierzchnia: ${surfaceLabels[a.surface] ?? a.surface}` : 'nawierzchnia: brak w OSM',
+    a.widthCm != null ? `szerokość ${a.widthCm} cm` : null,
+    a.incline != null ? `nachylenie ${a.incline}%` : null,
+    a.wheelchair ? `wheelchair=${a.wheelchair}` : null,
+  ].filter(Boolean);
   return {
     id: `osm-way-${edge.wayId}`,
     source: 'osm',
@@ -24,7 +32,7 @@ export function osmWayEvidence(edge: Edge, graph: Graph): Evidence {
     observedAt: null,
     status: 'mapped',
     isStale: isStale(edge.osmTimestamp),
-    description: `Droga OSM${edge.osmVersion ? ` (wersja ${edge.osmVersion})` : ''}; data edycji nie oznacza sprawdzenia w terenie.`,
+    description: `Droga OSM${edge.osmVersion ? ` (wersja ${edge.osmVersion})` : ''}: ${bits.join(' · ')}. Data edycji ≠ sprawdzenie w terenie.`,
   };
 }
 
@@ -86,7 +94,68 @@ function nodeDescription(graph: Graph, nodeIdx: number): { text: string; estimat
   return { text: parts.join('; '), estimated: attrs.kerbEstimated };
 }
 
-export function buildRoute(graph: Graph, layer: BarrierLayer, origin: Coordinate, destination: Coordinate, prefs: Preferences, mode: DataMode): { ok: true; route: RouteResult } | { ok: false; details: ReturnType<typeof astar> & { ok: false } } {
+export function buildRoute(graph: Graph, layer: BarrierLayer, origin: Coordinate, destination: Coordinate, prefs: Preferences, mode: DataMode, waypoints: Coordinate[] = []): { ok: true; route: RouteResult } | { ok: false; details: ReturnType<typeof astar> & { ok: false } } {
+  // Punkty „przez” / cele w parkach często leżą na izolowanych ścieżkach – dociągamy je do sieci osiągalnej z poprzedniego stopu.
+  const raw = [origin, ...waypoints, destination];
+  const stops: Coordinate[] = [origin];
+  for (let i = 1; i < raw.length; i++) {
+    stops.push(resolveConnectedCoordinate(graph, stops[i - 1]!, raw[i]!, prefs, layer, i < raw.length - 1 ? 1_100 : 900));
+  }
+  if (stops.length === 2) return assembleRoute(graph, layer, stops[0]!, stops[1]!, prefs, mode);
+
+  const parts: RouteResult[] = [];
+  for (let i = 0; i < stops.length - 1; i++) {
+    const r = assembleRoute(graph, layer, stops[i]!, stops[i + 1]!, prefs, mode);
+    if (!r.ok) return r;
+    parts.push(r.route);
+  }
+  return { ok: true, route: mergeLegs(parts, prefs) };
+}
+
+function mergeLegs(parts: RouteResult[], prefs: Preferences): RouteResult {
+  const letters = 'ABCDEF';
+  const segments: RouteSegment[] = [];
+  const steps: RouteInstruction[] = [];
+  const coords: [number, number][] = [];
+  const warnings = new Set<string>();
+  const barriers = new Map<string, Barrier>();
+  const avoided = new Map<string, Barrier>();
+  const legs: RouteLeg[] = parts.map((p) => ({ distanceM: p.distanceM, durationSeconds: p.durationSeconds, ascentM: p.elevation?.ascentM ?? null }));
+  parts.forEach((p, i) => {
+    for (const s of p.segments) segments.push({ ...s, id: `seg-${segments.length + 1}` });
+    p.steps.forEach((st, j) => {
+      const last = j === p.steps.length - 1;
+      const text = last && i < parts.length - 1 ? `Punkt ${letters[i] ?? i + 1}: ${st.text.replace(/^Cel/, 'przez punkt na trasie')}` : st.text;
+      steps.push({ ...st, id: `step-${steps.length + 1}`, text });
+    });
+    coords.push(...(coords.length ? p.geometry.coordinates.slice(1) : p.geometry.coordinates));
+    p.warnings.forEach((w) => warnings.add(w));
+    p.barriers.forEach((b) => barriers.set(b.id, b));
+    p.avoidedBarriers.forEach((b) => avoided.set(b.id, b));
+  });
+  const first = parts[0]!, last = parts[parts.length - 1]!;
+  return {
+    ...last,
+    id: first.id,
+    preferences: prefs,
+    geometry: { type: 'LineString', coordinates: coords },
+    distanceM: parts.reduce((a, p) => a + p.distanceM, 0),
+    durationSeconds: parts.reduce((a, p) => a + p.durationSeconds, 0),
+    unknownDistanceM: parts.reduce((a, p) => a + p.unknownDistanceM, 0),
+    uncertainDistanceM: parts.reduce((a, p) => a + p.uncertainDistanceM, 0),
+    segments,
+    steps,
+    barriers: [...barriers.values()],
+    avoidedBarriers: [...avoided.values()].filter((b) => !barriers.has(b.id)),
+    warnings: [...warnings],
+    originSnap: first.originSnap,
+    destinationSnap: last.destinationSnap,
+    elevation: null,
+    legs,
+  };
+}
+
+function assembleRoute(graph: Graph, layer: BarrierLayer, origin: Coordinate, destination: Coordinate, prefs: Preferences, mode: DataMode): { ok: true; route: RouteResult } | { ok: false; details: ReturnType<typeof astar> & { ok: false } } {
   const result = astar(graph, origin, destination, prefs, layer);
   if (!result.ok) return { ok: false, details: result };
 
@@ -144,7 +213,7 @@ export function buildRoute(graph: Graph, layer: BarrierLayer, origin: Coordinate
   const distanceM = segments.reduce((a, s) => a + s.lengthM, 0);
   const unknownDistanceM = segments.filter((s) => s.missingFields.includes('surface')).reduce((a, s) => a + s.lengthM, 0);
   const uncertainDistanceM = segments.filter((s) => s.uncertain).reduce((a, s) => a + s.lengthM, 0);
-  const durationSeconds = estimateDuration(result.steps);
+  const durationSeconds = estimateDuration(result.steps, prefs);
   const barriers = [...new Map(segments.flatMap((s) => s.barriers).map((b) => [b.id, b])).values()];
   const onRoute = new Set(barriers.map((b) => b.id));
   const avoidedBarriers = layer.all.filter((b) => !onRoute.has(b.id) && b.coordinate && barrierIsCurrent(b) && b.state === 'active' && b.blocksRouting)
@@ -192,6 +261,8 @@ export function buildRoute(graph: Graph, layer: BarrierLayer, origin: Coordinate
       warnings,
       originSnap,
       destinationSnap,
+      elevation: null,
+      legs: [{ distanceM: Math.round(distanceM), durationSeconds: Math.round(durationSeconds), ascentM: null }],
     },
   };
 }
@@ -224,13 +295,14 @@ function addNodeInfo(d: Draft, step: PathStep, graph: Graph, note: { text: strin
   }
 }
 
-function estimateDuration(steps: PathStep[]): number {
+function estimateDuration(steps: PathStep[], prefs: Preferences): number {
   let seconds = 0;
+  const speed = ACTIVITY_SPEED_MPS[prefs.activity] ?? config.speedMps;
   for (const s of steps) {
     const len = stepLength(s);
     const cls = s.edge.attrs.surfaceClass;
     const timeFactor = s.edge.attrs.kind === 'steps' ? 3 : cls === 1 ? 1.25 : cls === 2 ? 1.6 : 1;
-    seconds += (len * timeFactor) / config.speedMps;
+    seconds += (len * timeFactor) / speed;
     if (s.nodeEvaluation) {
       const attrs = s.nodeEvaluation;
       if (attrs.penaltyM >= 60) seconds += 45; else if (attrs.penaltyM > 0) seconds += 10;

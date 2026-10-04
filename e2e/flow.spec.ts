@@ -7,7 +7,7 @@ test.afterAll(async () => { for (const id of createdBarriers) await deleteBarrie
 test.describe('PewnySzlak – pełny przepływ (web, klawiatura + axe)', () => {
   test('preferencje → trasa → szczegóły źródeł → widok tekstowy → prowadzenie → zgłoszenie bariery', async ({ page }) => {
     await page.goto('/');
-    await expect(page.getByRole('heading', { name: 'Dokąd chcesz dojść?' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Poznaj Kraków według komfortu' })).toBeVisible();
     await axeCheck(page, 'planner');
 
     // Preferencje – tylko klawiatura
@@ -21,11 +21,13 @@ test.describe('PewnySzlak – pełny przepływ (web, klawiatura + axe)', () => {
     await expect(page.getByRole('radio', { name: '4 cm, wybrane' })).toBeVisible();
     await page.getByRole('button', { name: 'Gotowe' }).focus();
     await page.keyboard.press('Enter');
-    await expect(page.getByRole('heading', { name: 'Dokąd chcesz dojść?' })).toBeVisible();
-    await expect(page.getByText(/krawężnik ≤ 4 cm/)).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Poznaj Kraków według komfortu' })).toBeVisible();
+    await page.getByRole('button', { name: 'Zaawansowane limity komfortu' }).click();
+    await expect(page.getByRole('radio', { name: /^4 cm/ })).toBeVisible();
 
     // Start i cel przez wyszukiwarkę (lokalny indeks OSM)
-    await choosePlace(page, 'Początek trasy', 'Rynek Główny 1', /^Rynek Główny 1\b/);
+    await choosePlace(page, 'Start', 'Rynek Główny 1', /^Rynek Główny 1\b/);
+    await page.getByRole('button', { name: 'Trasa do celu' }).click();
     await choosePlace(page, 'Cel', 'Wawel', /Wawel/);
 
     await page.getByTestId('plan-route').focus();
@@ -101,8 +103,9 @@ test.describe('PewnySzlak – pełny przepływ (web, klawiatura + axe)', () => {
     await page.getByRole('radio', { name: /^Demo/ }).click();
     await page.getByRole('button', { name: 'Gotowe' }).click();
     await page.goto('/');
-    await expect(page.getByText(/Tryb DEMO/)).toBeVisible();
-    await choosePlace(page, 'Początek trasy', 'Rynek Główny 1', /^Rynek Główny 1\b/);
+    await expect(page.getByText('Demo').first()).toBeVisible();
+    await choosePlace(page, 'Start', 'Rynek Główny 1', /^Rynek Główny 1\b/);
+    await page.getByRole('button', { name: 'Trasa do celu' }).click();
     await choosePlace(page, 'Cel', 'Wawel', /Wawel/);
     await page.getByTestId('plan-route').click();
     await expect(page.getByRole('heading', { name: 'Trasa omija' })).toBeVisible({ timeout: 30_000 });
@@ -127,5 +130,25 @@ test.describe('PewnySzlak – pełny przepływ (web, klawiatura + axe)', () => {
     expect(body).not.toMatch(/jest dostępn/i);
     await expect(screen.getByText('Źródła').first()).toBeVisible();
     await axeCheck(page, 'assistant');
+  });
+
+  test('comfort-first: Odkryj okolice bez celu (wózek)', async ({ page }) => {
+    await page.goto('/');
+    await page.getByRole('radio', { name: 'Wózek' }).click();
+    await choosePlace(page, 'Start', 'Rynek Główny 1', /^Rynek Główny 1\b/);
+    await page.getByTestId('explore-around').click();
+    await expect(page.getByRole('heading', { name: 'Odkryj okolice' })).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByText(/Brak danych ≠ brak barier|Jak czytać wynik|WARTO ZOBACZYĆ|Pasuje/i).first()).toBeVisible({ timeout: 45_000 });
+    await expect(page.getByText(/Sprawdzone w terenie|Schody|Toaleta/i).first()).toBeVisible({ timeout: 45_000 });
+    await axeCheck(page, 'explore');
+  });
+
+  test('demo: karta scenariuszy na home', async ({ page }) => {
+    await page.goto('/preferences');
+    await page.getByRole('radio', { name: /^Demo/ }).click();
+    await page.getByRole('button', { name: 'Gotowe' }).click();
+    await page.goto('/');
+    await expect(page.getByTestId('demo-scenarios')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Awaria źródła (PSOZ)' })).toBeVisible();
   });
 });

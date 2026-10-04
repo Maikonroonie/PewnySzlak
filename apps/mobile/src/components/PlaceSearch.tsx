@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import type { Coordinate, Place } from '@pewnyszlak/domain';
+import { placeCategoryLabel, type Coordinate, type Place } from '@pewnyszlak/domain';
 import React, { useEffect, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { api } from '../api/client';
@@ -7,7 +7,7 @@ import { announce } from '../lib/a11y';
 import { getCurrentPosition } from '../lib/location';
 import type { Point } from '../state/store';
 import { colors, spacing } from '../theme';
-import { Badge, Button, Input, Small, styles, focusRing } from './ui';
+import { Button, Input, Small, styles, focusRing } from './ui';
 
 type Props = {
   label: string;
@@ -108,17 +108,16 @@ export function PlaceSearch({ label, value, onChange, near, allowMyLocation, onP
               {q.length >= 2 && search.isLoading ? <Small style={{ padding: spacing(1.5) }}>Szukam…</Small> : null}
               {q.length >= 2 && search.isError ? <Text accessibilityRole="alert" style={[styles.p, { color: colors.danger, padding: spacing(1.5) }]}>Nie udało się wyszukać: {(search.error as Error).message}</Text> : null}
               {q.length >= 2 && search.isSuccess && results.length === 0 ? <Small style={{ padding: spacing(1.5) }}>Brak wyników w Krakowie dla „{q}”. Spróbuj nazwy ulicy z numerem.</Small> : null}
-              {results.map((p) => (
-                <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={`${placeLabel(p)}${p.kind === 'facility' ? ', placówka NFZ' : ''}${p.entranceVerified ? '' : ', dojście do wejścia niezweryfikowane'}`} onPress={() => pick(p)} disabled={!p.coordinate} style={(st) => [rowStyle, focusRing(st)]}>
-                  <Text style={styles.p}>{p.name}</Text>
-                  {p.address && p.kind !== 'address' ? <Small>{p.address}</Small> : null}
-                  <View style={{ flexDirection: 'row', gap: 6, marginTop: 4, flexWrap: 'wrap' }}>
-                    {p.kind === 'facility' ? <Badge text="Placówka NFZ" tone="info" /> : null}
-                    {p.category ? <Badge text={p.category} tone="muted" /> : null}
-                    {!p.entranceVerified ? <Badge text="Dojście do wejścia niezweryfikowane" tone="warn" /> : null}
-                  </View>
-                </Pressable>
-              ))}
+              {results.map((p) => {
+                const cat = p.kind === 'facility' ? 'Placówka NFZ' : p.category ? placeCategoryLabel(p.category) : null;
+                const subtitle = [p.address && p.kind !== 'address' ? p.address : null, cat && cat !== p.name ? cat : null].filter(Boolean).join(' · ');
+                return (
+                  <Pressable key={p.id} accessibilityRole="button" accessibilityLabel={`${placeLabel(p)}${cat ? `, ${cat}` : ''}`} onPress={() => pick(p)} disabled={!p.coordinate} style={(st) => [rowStyle, focusRing(st)]}>
+                    <Text style={styles.p}>{p.name}</Text>
+                    {subtitle ? <Small>{subtitle}</Small> : null}
+                  </Pressable>
+                );
+              })}
             </View>
           ) : null}
         </View>

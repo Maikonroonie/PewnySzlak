@@ -251,4 +251,15 @@ describe('routing – wynik', () => {
     assert.equal(r.route.segments[0]!.evidence[0]!.isStale, true);
     assert.equal(r.route.segments[0]!.evidence[0]!.observedAt, null, 'data edycji OSM nie jest datą sprawdzenia');
   });
+
+  it('odwiedza punkt pośredni (A → D → C) i zwraca dwa odcinki nóg', () => {
+    const g = diamond(FOOT);
+    const via = { latitude: pt(100, 120).lat, longitude: pt(100, 120).lon };
+    const r = buildRoute(g, BarrierLayer.empty(), origin, destination, prefs, 'live', [via]);
+    assert.ok(r.ok);
+    assert.equal(r.route.legs.length, 2);
+    assert.ok(usesEdge(r, 'bd:0'));
+    assert.ok(usesEdge(r, 'dc:0'));
+    assert.ok(r.route.steps.some((s) => /Punkt A/.test(s.text)));
+  });
 });

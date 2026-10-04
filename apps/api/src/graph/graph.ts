@@ -130,20 +130,29 @@ export class Graph {
 
   /** Najbliższa krawędź spełniająca predykat – przeszukuje pierścienie siatki aż do maxDistanceM. */
   snap(lon: number, lat: number, accept: (edge: Edge) => boolean, maxDistanceM = 400): { edge: Edge; distanceM: number; point: [number, number]; alongM: number } | null {
-    let best: { edge: Edge; distanceM: number; point: [number, number]; alongM: number } | null = null;
+    const all = this.snapMany(lon, lat, accept, maxDistanceM, 1);
+    return all[0] ?? null;
+  }
+
+  /** Najbliższe krawędzie (rosnąco po dystansie) – do wyboru snapu połączonego z trasą (parki / staw). */
+  snapMany(lon: number, lat: number, accept: (edge: Edge) => boolean, maxDistanceM = 400, limit = 8): { edge: Edge; distanceM: number; point: [number, number]; alongM: number }[] {
+    const hits: { edge: Edge; distanceM: number; point: [number, number]; alongM: number }[] = [];
+    const seen = new Set<number>();
     const maxRing = Math.ceil(maxDistanceM / (CELL * 111_000)) + 1;
     for (let ring = 0; ring <= maxRing; ring++) {
       for (const idx of this.edgesNear(lon, lat, ring)) {
+        if (seen.has(idx)) continue;
+        seen.add(idx);
         const edge = this.edges[idx]!;
         if (!accept(edge)) continue;
         const hit = pointToPolylineM(lon, lat, edge.coords);
         if (hit.distanceM > maxDistanceM) continue;
-        if (!best || hit.distanceM < best.distanceM) best = { edge, distanceM: hit.distanceM, point: hit.point, alongM: hit.alongM };
+        hits.push({ edge, distanceM: hit.distanceM, point: hit.point, alongM: hit.alongM });
       }
-      // komórki w pierścieniu `ring` są oddalone co najmniej o (ring-1)*CELL; jeśli najlepszy wynik jest bliżej, kończymy
-      if (best && best.distanceM < (ring - 1) * CELL * 111_000 * 0.7) break;
+      if (hits.length >= limit * 3 && hits.some((h) => h.distanceM < (ring - 1) * CELL * 111_000 * 0.7)) break;
     }
-    return best;
+    hits.sort((a, b) => a.distanceM - b.distanceM);
+    return hits.slice(0, limit);
   }
 
   edgesInBbox(minLon: number, minLat: number, maxLon: number, maxLat: number): Edge[] {

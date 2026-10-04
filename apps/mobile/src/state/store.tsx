@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { DEFAULT_PREFERENCES, preferencesSchema, type Coordinate, type DataMode, type Preferences, type RouteResult } from '@pewnyszlak/domain';
+import { applyEffort, DEFAULT_PREFERENCES, preferencesSchema, type Coordinate, type DataMode, type ExploreResponse, type Preferences, type RouteResult } from '@pewnyszlak/domain';
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { setApiContext } from '../api/client';
 
@@ -10,27 +10,35 @@ type Persisted = {
   dataMode: DataMode;
   installationId: string;
   lastRoute: { route: RouteResult; origin: Point; destination: Point; savedAt: string } | null;
+  lastExplore: { data: ExploreResponse; savedAt: string } | null;
   recent: Point[];
   textMode: boolean;
+  exploreRadiusM: number;
 };
 
 type Store = Persisted & {
   ready: boolean;
   origin: Point | null;
   destination: Point | null;
+  waypoints: Point[];
   route: RouteResult | null;
   setPreferences: (p: Partial<Preferences>) => void;
   resetPreferences: () => void;
   setDataMode: (m: DataMode) => void;
+  setExploreRadiusM: (m: number) => void;
   setOrigin: (p: Point | null) => void;
   setDestination: (p: Point | null) => void;
+  setWaypoints: (p: Point[]) => void;
+  addWaypoint: (p: Point) => void;
+  updateWaypoint: (i: number, p: Point | null) => void;
   swapPoints: () => void;
   setRoute: (r: RouteResult | null) => void;
+  setLastExplore: (data: ExploreResponse | null) => void;
   setTextMode: (v: boolean) => void;
   addRecent: (p: Point) => void;
 };
 
-const KEY = 'pewnyszlak.v1';
+const KEY = 'pewnyszlak.v2';
 const StoreContext = createContext<Store | null>(null);
 
 function randomId(): string {
@@ -40,13 +48,14 @@ function randomId(): string {
   return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
 }
 
-const defaults = (): Persisted => ({ preferences: DEFAULT_PREFERENCES, dataMode: 'live', installationId: randomId(), lastRoute: null, recent: [], textMode: false });
+const defaults = (): Persisted => ({ preferences: DEFAULT_PREFERENCES, dataMode: 'live', installationId: randomId(), lastRoute: null, lastExplore: null, recent: [], textMode: false, exploreRadiusM: 5_000 });
 
 export function StoreProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<Persisted>(defaults);
   const [ready, setReady] = useState(false);
   const [origin, setOrigin] = useState<Point | null>(null);
   const [destination, setDestination] = useState<Point | null>(null);
+  const [waypoints, setWaypointsState] = useState<Point[]>([]);
   const [route, setRouteState] = useState<RouteResult | null>(null);
   const loaded = useRef(false);
 
@@ -59,6 +68,8 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
             ...s,
             ...parsed,
             preferences: preferencesSchema.parse({ ...s.preferences, ...(parsed.preferences ?? {}) }),
+            exploreRadiusM: typeof parsed.exploreRadiusM === 'number' ? parsed.exploreRadiusM : 600,
+            lastExplore: parsed.lastExplore ?? null,
             installationId: parsed.installationId && parsed.installationId.length >= 16 ? parsed.installationId : s.installationId,
           }));
           if (parsed.lastRoute) { setOrigin(parsed.lastRoute.origin); setDestination(parsed.lastRoute.destination); setRouteState(parsed.lastRoute.route); }
@@ -85,17 +96,29 @@ export function StoreProvider({ children }: { children: React.ReactNode }) {
     ready,
     origin,
     destination,
+    waypoints,
     route,
-    setPreferences: (p) => setState((s) => ({ ...s, preferences: preferencesSchema.parse({ ...s.preferences, ...p }) })),
+    setPreferences: (p) => setState((s) => {
+      const next = preferencesSchema.parse({ ...s.preferences, ...p });
+      return { ...s, preferences: ('activity' in p || 'effort' in p) ? applyEffort(next) : next };
+    }),
     resetPreferences: () => setState((s) => ({ ...s, preferences: DEFAULT_PREFERENCES })),
     setDataMode: (m) => setState((s) => ({ ...s, dataMode: m })),
+    setExploreRadiusM: (m) => setState((s) => ({ ...s, exploreRadiusM: m })),
     setOrigin: (p) => { setOrigin(p); setRouteState(null); },
     setDestination: (p) => { setDestination(p); setRouteState(null); },
+    setWaypoints: (p) => { setWaypointsState(p.slice(0, 6)); setRouteState(null); },
+    addWaypoint: (p) => { setWaypointsState((w) => (w.length >= 6 ? w : [...w, p])); setRouteState(null); },
+    updateWaypoint: (i, p) => { setWaypointsState((w) => (p ? w.map((x, n) => (n === i ? p : x)) : w.filter((_, n) => n !== i))); setRouteState(null); },
     swapPoints: () => { setOrigin(destination); setDestination(origin); setRouteState(null); },
     setRoute,
+    setLastExplore: (data) => setState((s) => ({
+      ...s,
+      lastExplore: data ? { data, savedAt: new Date().toISOString() } : null,
+    })),
     setTextMode: (v) => setState((s) => ({ ...s, textMode: v })),
     addRecent: (p) => setState((s) => ({ ...s, recent: [p, ...s.recent.filter((r) => r.label !== p.label)].slice(0, 6) })),
-  }), [state, ready, origin, destination, route, setRoute]);
+  }), [state, ready, origin, destination, waypoints, route, setRoute]);
 
   // Do czasu odczytu zapisanych ustawień nie renderujemy ekranów (ułamek sekundy) – unikamy zapytań z domyślnym trybem.
   return <StoreContext.Provider value={value}>{ready ? children : null}</StoreContext.Provider>;

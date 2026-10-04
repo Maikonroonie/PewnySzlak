@@ -19,8 +19,8 @@ type ButtonProps = PressableProps & { title: string; variant?: 'primary' | 'seco
 const buttonIcons: Record<string, React.ComponentProps<typeof Feather>['name']> = { '➜': 'arrow-up-right', '⇅': 'repeat', '◎': 'navigation', '≡': 'align-left', '⚑': 'flag', '✎': 'message-circle', 'ⓘ': 'info', '⌖': 'crosshair', '▶': 'play', 'Ⅱ': 'pause' };
 
 export function Button({ title, variant = 'primary', loading, icon, style, disabled, accessibilityLabel, ...rest }: ButtonProps) {
-  const bg = variant === 'primary' ? colors.primary : variant === 'danger' ? colors.danger : variant === 'secondary' ? colors.paper : 'transparent';
-  const fg = variant === 'primary' || variant === 'danger' ? colors.primaryText : colors.primary;
+  const bg = variant === 'primary' ? '#111111' : variant === 'danger' ? colors.danger : variant === 'secondary' ? colors.paper : 'transparent';
+  const fg = variant === 'primary' || variant === 'danger' ? '#FFFFFF' : colors.text;
   return (
     <Pressable
       accessibilityRole="button"
@@ -70,8 +70,8 @@ export function Switch({ value, onChange, label, hint }: { value: boolean; onCha
         <Text style={styles.p}>{label}</Text>
         {hint ? <Small>{hint}</Small> : null}
       </View>
-      <View style={[styles.switchTrack, value && { backgroundColor: colors.primary }]}>
-        <Text style={[styles.switchText, value && { color: colors.primaryText }]}>{value ? 'TAK' : 'NIE'}</Text>
+      <View style={[styles.switchTrack, value && { backgroundColor: '#111111', borderColor: '#111111' }]}>
+        <Text style={[styles.switchText, value && { color: '#FFFFFF' }]}>{value ? 'TAK' : 'NIE'}</Text>
       </View>
     </Pressable>
   );
@@ -84,8 +84,8 @@ export function Choice<T extends string | number>({ options, value, onChange, la
       {options.map((o) => {
         const selected = o.value === value;
         return (
-          <Pressable key={String(o.value)} role="radio" accessibilityState={{ checked: selected, selected }} aria-checked={selected} accessibilityLabel={`${o.label}${selected ? ', wybrane' : ''}`} onPress={() => onChange(o.value)} style={(st) => [styles.chip, selected && { backgroundColor: colors.primary, borderColor: colors.primary }, focusRing(st)]}>
-            <Text style={[styles.chipText, selected && { color: colors.primaryText }]}>{selected ? '● ' : '○ '}{o.label}</Text>
+          <Pressable key={String(o.value)} role="radio" accessibilityState={{ checked: selected, selected }} aria-checked={selected} accessibilityLabel={`${o.label}${selected ? ', wybrane' : ''}`} onPress={() => onChange(o.value)} style={(st) => [styles.chip, selected && { backgroundColor: '#111111', borderColor: '#111111' }, focusRing(st)]}>
+            <Text style={[styles.chipText, selected && { color: '#FFFFFF' }]}>{selected ? '● ' : '○ '}{o.label}</Text>
           </Pressable>
         );
       })}
@@ -118,16 +118,16 @@ export const styles = StyleSheet.create({
   p: { fontSize: 17, lineHeight: 24, color: colors.text },
   small: { fontSize: 14, lineHeight: 20, color: colors.textMuted },
   label: { fontSize: 16, fontWeight: '700', color: colors.text, marginBottom: 4 },
-  button: { minHeight: minTouch, paddingHorizontal: spacing(2), paddingVertical: spacing(1.25), borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  button: { minHeight: minTouch, paddingHorizontal: spacing(2), paddingVertical: spacing(1.25), borderRadius: 999, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   buttonText: { fontSize: 15, fontWeight: '700' },
   focus: { outlineWidth: 3, outlineColor: colors.focus, outlineStyle: 'solid', borderColor: colors.focus } as ViewStyle,
-  card: { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, borderRadius: radius, padding: spacing(2), marginBottom: spacing(1.5) },
+  card: { backgroundColor: colors.paper, borderWidth: 1, borderColor: colors.border, borderRadius: radius, padding: spacing(2), marginBottom: spacing(1.5), shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 12, shadowOffset: { width: 0, height: 4 } },
   badge: { borderWidth: 1.5, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3, alignSelf: 'flex-start' },
   badgeText: { fontSize: 12, fontWeight: '700' },
   input: { minHeight: 54, borderWidth: 1, borderColor: colors.border, borderRadius: radius, paddingHorizontal: spacing(1.5), fontSize: 17, color: colors.text, backgroundColor: colors.bg },
   switchRow: { flexDirection: 'row', alignItems: 'center', gap: spacing(1.5), minHeight: minTouch, paddingVertical: spacing(1), borderRadius: radius },
-  switchTrack: { minWidth: 64, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999, borderWidth: 2, borderColor: colors.primary, alignItems: 'center' },
-  switchText: { fontWeight: '800', color: colors.primary },
-  chip: { minHeight: 44, paddingHorizontal: 14, justifyContent: 'center', borderRadius: 999, borderWidth: 2, borderColor: colors.border, backgroundColor: colors.bg },
-  chipText: { fontSize: 16, fontWeight: '600', color: colors.text },
+  switchTrack: { minWidth: 64, paddingHorizontal: 10, paddingVertical: 8, borderRadius: 999, borderWidth: 2, borderColor: colors.border, alignItems: 'center' },
+  switchText: { fontWeight: '800', color: colors.textMuted },
+  chip: { minHeight: 44, paddingHorizontal: 14, justifyContent: 'center', borderRadius: 999, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.paper },
+  chipText: { fontSize: 15, fontWeight: '700', color: colors.text },
 });

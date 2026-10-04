@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PewnySzlak — Launch Film</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,500;0,9..40,700;0,9..40,800;1,9..40,500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="stage" id="stage">
+    <div class="grain" aria-hidden="true"></div>
+    <div class="orb orb-a" aria-hidden="true"></div>
+    <div class="orb orb-b" aria-hidden="true"></div>
+
+    <!-- Intro brand -->
+    <section class="scene scene-intro" data-scene="intro">
+      <div class="intro-mark">
+        <div class="intro-logo">
+          <svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true">
+            <circle cx="20" cy="20" r="20" fill="#111" />
+            <path d="M10 22c4-8 8-10 10-10s6 2 10 10" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/>
+            <circle cx="20" cy="14" r="2.2" fill="#007AFF"/>
+          </svg>
+        </div>
+        <h1 class="intro-title">PewnySzlak</h1>
+        <p class="intro-sub">Kraków bez barier · trasy pod Twój komfort</p>
+      </div>
+    </section>
+
+    <!-- Phone device -->
+    <div class="device-wrap" id="deviceWrap">
+      <div class="device-glow" aria-hidden="true"></div>
+      <div class="device" id="device">
+        <div class="device-notch" aria-hidden="true"></div>
+        <div class="device-screen" id="screen">
+
+          <!-- SCENE 1: Preferences / modes -->
+          <div class="app-scene" data-app="prefs" id="scenePrefs">
+            <header class="app-top">
+              <div class="brand-row">
+                <span class="brand-dot">↗</span>
+                <strong>PewnySzlak</strong>
+              </div>
+              <span class="pill-soft">Preferencje</span>
+            </header>
+            <h2 class="app-h1">Jak chcesz jechać?</h2>
+            <p class="app-lead">Tryb aktywności i limity trasy.</p>
+            <div class="mode-grid" id="modeGrid">
+              <button class="mode-chip" data-mode="walk"><span>🚶</span>Spacer</button>
+              <button class="mode-chip" data-mode="run"><span>🏃</span>Bieg</button>
+              <button class="mode-chip" data-mode="bike"><span>🚲</span>Rower</button>
+              <button class="mode-chip" data-mode="skates"><span>🛼</span>Rolki</button>
+              <button class="mode-chip" data-mode="wheel"><span>♿</span>Wózek</button>
+            </div>
+            <div class="prefs-card">
+              <div class="prefs-row"><span>Nachylenie</span><b id="prefIncline">do 12%</b></div>
+              <div class="prefs-row"><span>Krawężnik</span><b>do 12 cm</b></div>
+              <div class="prefs-row"><span>Szerokość</span><b>≥ 60 cm</b></div>
+              <div class="prefs-row"><span>Schody</span><b>omijaj</b></div>
+            </div>
+          </div>
+
+          <!-- SCENE 2/3: Explore / route length -->
+          <div class="app-scene is-hidden" data-app="explore" id="sceneExplore">
+            <header class="app-top">
+              <div class="brand-row">
+                <span class="brand-dot">←</span>
+                <strong>PewnySzlak</strong>
+              </div>
+              <span class="pill-soft bike-pill">🚲 Rower</span>
+            </header>
+            <h2 class="app-h1">Odkryj okolice</h2>
+            <p class="app-lead">Cel długości i powrót do startu.</p>
+            <div class="length-row" id="lengthRow">
+              <span class="len-chip">5 km</span>
+              <span class="len-chip">10 km</span>
+              <span class="len-chip">20 km</span>
+              <span class="len-chip is-on" id="len50">50 km</span>
+            </div>
+            <div class="trip-row">
+              <span class="trip-chip is-on" id="tripRound">Tam i z powrotem</span>
+              <span class="trip-chip">W jedną stronę</span>
+            </div>
+            <div class="mini-map" id="miniMap">
+              <svg class="map-svg" viewBox="0 0 280 160" preserveAspectRatio="xMidYMid slice">
+                <defs>
+                  <linearGradient id="routeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#007AFF"/>
+                    <stop offset="100%" stop-color="#5AC8FA"/>
+                  </linearGradient>
+                </defs>
+                <rect width="280" height="160" fill="#E8EEF5"/>
+                <g opacity="0.35" stroke="#9AA8B8" stroke-width="1">
+                  <path d="M0 40 H280 M0 80 H280 M0 120 H280"/>
+                  <path d="M40 0 V160 M90 0 V160 M140 0 V160 M190 0 V160 M240 0 V160"/>
+                </g>
+                <path id="planRoute" class="route-path" d="M36 120 C70 110, 90 60, 130 55 S190 90, 210 70 S245 40, 250 48" fill="none" stroke="url(#routeGrad)" stroke-width="4" stroke-linecap="round"/>
+                <circle class="map-pin start" cx="36" cy="120" r="6" fill="#34C759"/>
+                <circle class="map-pin turn" cx="130" cy="55" r="5" fill="#FF9F0A"/>
+                <circle class="map-pin end" cx="250" cy="48" r="6" fill="#007AFF"/>
+              </svg>
+              <div class="map-badge" id="mapBadge">Liczenie trasy…</div>
+            </div>
+            <div class="variant-card is-selected" id="variantCard">
+              <div class="variant-title">Pętla · 50 km</div>
+              <div class="variant-meta">49,8 km · ok. 3 h 40 min · z powrotem</div>
+              <div class="variant-prefs">nachylenie ≤ 12% · bez schodów · rower</div>
+            </div>
+            <button class="cta" id="ctaAccept">Akceptuj i prowadź (GPS)</button>
+          </div>
+
+          <!-- SCENE 4: GPS guide -->
+          <div class="app-scene is-hidden" data-app="guide" id="sceneGuide">
+            <div class="guide-hero" id="guideHero">
+              <div class="guide-icon">↗</div>
+              <div class="guide-copy">
+                <div class="guide-step" id="guideStep">Jedź prosto ul. Dietla</div>
+                <div class="guide-next" id="guideNext">Za 320 m: skręć w lewo</div>
+              </div>
+            </div>
+            <div class="guide-badges">
+              <span class="g-badge">Krok 1 z 24</span>
+              <span class="g-badge info">Do celu 49,8 km</span>
+              <span class="g-badge ok" id="gpsBadge">GPS ±8 m</span>
+            </div>
+            <div class="nav-map" id="navMap">
+              <svg viewBox="0 0 280 220" class="nav-svg">
+                <rect width="280" height="220" fill="#DDE7F2"/>
+                <g opacity="0.3" stroke="#8FA0B3" stroke-width="1">
+                  <path d="M0 55 H280 M0 110 H280 M0 165 H280"/>
+                  <path d="M50 0 V220 M110 0 V220 M170 0 V220 M230 0 V220"/>
+                </g>
+                <path id="navRoute" d="M40 180 C80 160, 100 120, 140 110 S200 130, 230 90 S255 50, 260 40" fill="none" stroke="#007AFF" stroke-width="5" stroke-linecap="round"/>
+                <path id="navProgress" d="M40 180 C80 160, 100 120, 140 110" fill="none" stroke="#111" stroke-width="5" stroke-linecap="round" stroke-dasharray="400" stroke-dashoffset="400"/>
+                <g id="userDot" transform="translate(40 180)">
+                  <circle r="14" fill="#007AFF" opacity="0.2"/>
+                  <circle r="7" fill="#111" stroke="#fff" stroke-width="3"/>
+                </g>
+              </svg>
+              <div class="nav-live"><span class="pulse"></span> Lokalizacja aktywna</div>
+            </div>
+            <div class="guide-status">Jesteś na początku trasy · prowadzenie włączone</div>
+          </div>
+
+          <!-- SCENE 5: Assistant burgers -->
+          <div class="app-scene is-hidden" data-app="chat" id="sceneChat">
+            <header class="app-top">
+              <div class="brand-row">
+                <span class="brand-dot">💬</span>
+                <strong>Asystent</strong>
+              </div>
+              <span class="pill-soft">przy trasie</span>
+            </header>
+            <div class="chat-thread" id="chatThread">
+              <div class="bubble user" id="bubbleUser">Szukam burgerów w okolicy</div>
+              <div class="bubble bot" id="bubbleBot">
+                <div class="bot-label">Asystent</div>
+                <p>Trzy propozycje burgerów przy Twojej trasie:</p>
+                <div class="food-card" data-food="1">
+                  <strong>Pasibus</strong>
+                  <span>ul. Szewska 23 · 1,2 km</span>
+                </div>
+                <div class="food-card" data-food="2">
+                  <strong>Bobby Burger</strong>
+                  <span>ul. Pawia 5 · 2,4 km</span>
+                </div>
+                <div class="food-card" data-food="3">
+                  <strong>Meat Love</strong>
+                  <span>ul. Krakowska 19 · 3,1 km</span>
+                </div>
+              </div>
+            </div>
+            <div class="chat-chips">
+              <span class="chip-dim">Jedzenie</span>
+              <span class="chip-hot">Burgery</span>
+            </div>
+          </div>
+
+        </div>
+        <div class="device-home" aria-hidden="true"></div>
+      </div>
+    </div>
+
+    <!-- Caption / chapter titles -->
+    <div class="caption" id="caption">
+      <span class="caption-kicker" id="captionKicker">01</span>
+      <h2 class="caption-title" id="captionTitle">Preferencje</h2>
+      <p class="caption-body" id="captionBody">Tryby jazdy i limity komfortu</p>
+    </div>
+
+    <!-- End card -->
+    <section class="scene scene-end is-hidden" data-scene="end" id="sceneEnd">
+      <div class="end-card">
+        <div class="end-logo">PewnySzlak</div>
+        <p class="end-line">Trasa pod Twój komfort.</p>
+        <p class="end-sub">Rower · 50 km · GPS · Asystent</p>
+      </div>
+    </section>
+
+    <div class="rec-bar" id="recBar">
+      <button type="button" id="btnPlay" class="rec-btn primary">Odtwórz film</button>
+      <button type="button" id="btnReplay" class="rec-btn">Od początku</button>
+      <span class="rec-hint">Do nagrania MP4: pełny ekran → nagraj okno przeglądarki</span>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

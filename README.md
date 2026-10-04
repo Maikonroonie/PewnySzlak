@@ -42,6 +42,8 @@ npm run dev:api                 # API: http://localhost:4000 (graf wczytuje się
 npm run dev:web                 # aplikacja web: http://localhost:8081
 ```
 
+Szybki start dema dla jury (3 komendy + ścieżka 90 s): [`docs/demo-start.md`](docs/demo-start.md).
+
 Android/iOS (development build, bo MapLibre to moduł natywny):
 
 ```bash
@@ -95,15 +97,17 @@ npm run operator -- graph | graph-activate <wersja> | backup
 
 Każda akcja trafia do `operator_log`. Potwierdzenia użytkowników zmieniają stan bariery (≥2 „zniknęła” przeważające nad potwierdzeniami → usunięta, ≥2 zaprzeczenia → sporna), ale nigdy nie dają statusu „zweryfikowane”.
 
-## Scenariusz demo (5 min)
+## Scenariusz demo (5 min) – wózek, comfort-first
 
-1. **Preferencje** → „Ustaw dla wózka” (6 %, 2 cm, 90 cm, bez schodów) → Dane: **Demo**.
-2. Start „Rynek Główny 1”, cel „Wawel” → **Wyznacz trasę**. Trasa (ok. 1,6 km) **omija remont na Grodzkiej** (sygnał z przetargu z-dykty + weryfikacja operatora + zgłoszenie); bez demo szłaby Grodzką (ok. 1,5 km).
-3. Dotknij odcinka → **Skąd to wiemy**: status „Zmapowane w OSM (niesprawdzone w terenie)”, data edycji OSM osobno od „Sprawdzono w terenie: nie”, link do obiektu OSM, lista tagów.
-4. **Widok tekstowy** – pełna alternatywa bez mapy; **Prowadź mnie** → „Symuluj przejście trasy” (komunikaty zmieniają się po przejściu punktów; przy odmowie GPS tryb ręczny).
-5. **Zgłoś barierę tutaj** → zgłoszenie od razu widoczne i omijane; **Potwierdzam** → licznik rośnie, status pozostaje „Bez formalnej weryfikacji”.
-6. Mapa barier w demo: sporny krawężnik (sprzeczne obserwacje), nieaktualne zgłoszenie windy („może być nieaktualne”), potencjalna bariera z przetargu na Floriańskiej, bariera usunięta. **Źródła danych**: jedno źródło „Niedostępne – używamy ostatnich pobranych danych” (symulowana awaria).
-7. **Asystent**: „najbliższa poradnia rehabilitacyjna” → placówki NFZ z deklaracjami udogodnień i źródłem; „skąd są dane?”; „trasa do Wawel”. Asystent nigdy nie twierdzi, że coś „jest dostępne”.
+1. Na home wybierz **Wózek** (domyślny) → panel **Komfort**: bez schodów, nachylenie ≤ 6 %, krawężnik ≤ 2 cm, szerokość ≥ 90 cm → Dane: **Demo** (Preferencje / Ja).
+2. Start **„Rynek Główny 1”** → **Odkryj okolice**. Mapa pokazuje sieć komfortu (zielony / niepewny / wykluczony) + karty miejsc z barierami, udogodnieniami, źródłem i wiarygodnością. Brak danych ≠ brak barier.
+3. Otwórz kartę miejsca → oceń samodzielnie → opcjonalnie **Trasa do tego miejsca**. Albo wróć i **Trasa do celu** → cel „Wawel” → **Wyznacz trasę**. Trasa (ok. 1,6 km) **omija remont na Grodzkiej**; bez demo szłaby Grodzką (ok. 1,5 km).
+4. Dotknij odcinka → **Skąd to wiemy**: status „Zmapowane w OSM (niesprawdzone w terenie)”, data edycji OSM osobno od „Sprawdzono w terenie: nie”, link do obiektu OSM, lista tagów.
+5. **Widok tekstowy** – pełna alternatywa bez mapy; **Prowadź mnie** → „Symuluj przejście trasy”.
+6. **Zgłoś barierę tutaj** → zgłoszenie od razu widoczne i omijane; **Potwierdzam** → licznik rośnie, status pozostaje „Bez formalnej weryfikacji”.
+7. **Źródła danych**: jedno źródło „Niedostępne – używamy ostatnich pobranych danych” (symulowana awaria). **Asystent**: „najbliższa poradnia rehabilitacyjna” – placówki z deklaracjami, nigdy „jest dostępne”.
+
+Zgodne z checklistą wyzwania (sekcja 6 PDF): potrzeby → miejsce/trasa → konkretne bariery i źródła → użytkownik ocenia.
 
 ## Testy
 

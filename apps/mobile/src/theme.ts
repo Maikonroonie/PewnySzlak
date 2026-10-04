@@ -1,15 +1,40 @@
 import { Platform } from 'react-native';
 
-/** Warm editorial palette. Statuses always have a text/pattern equivalent. */
+/** Jasna, sportowa paleta w stylu iOS – kontrast ≥ 4,5:1. */
 export const colors = {
-  bg: '#F6F5EF', surface: '#EEEFE7', paper: '#FFFFFF', border: '#DDDED4',
-  text: '#243C32', textMuted: '#58665C', primary: '#254F3E', primaryText: '#FFFFFF',
-  ok: '#315E43', warn: '#88540E', danger: '#B63E32', info: '#355951', focus: '#A55D14',
-  routeOk: '#387259', routeUncertain: '#B67B25', routeDifficult: '#D74B3E',
-  barrierActive: '#B63E32', barrierPotential: '#88540E', barrierDisputed: '#704D85', barrierResolved: '#657167',
-  sage: '#DEE8D8', peach: '#F5DED0', cream: '#F5EBCF',
+  bg: '#F5F5F7',
+  surface: '#FFFFFF',
+  paper: '#FFFFFF',
+  border: '#E5E5EA',
+  text: '#1C1C1E',
+  textMuted: '#6C6C70',
+  primary: '#007AFF',
+  primaryText: '#FFFFFF',
+  ok: '#248A3D',
+  warn: '#C93400',
+  danger: '#D70015',
+  info: '#007AFF',
+  focus: '#007AFF',
+  routeOk: '#007AFF',
+  routeUncertain: '#FF9F0A',
+  routeDifficult: '#FF3B30',
+  barrierActive: '#FF3B30',
+  barrierPotential: '#FF9F0A',
+  barrierDisputed: '#BF5AF2',
+  barrierResolved: '#8E8E93',
+  sage: '#EEF6FF',
+  peach: '#FFF4EC',
+  cream: '#F4F4F6',
+  hairline: '#D1D1D6',
 };
-export const headingFont = Platform.OS === 'ios' || Platform.OS === 'web' ? 'Georgia' : 'serif';
+
+export const headingFont = Platform.select({
+  ios: 'System',
+  android: 'sans-serif-medium',
+  default: 'system-ui, -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif',
+}) as string;
+
 export const spacing = (n: number) => n * 8;
-export const radius = 20;
+export const radius = 22;
 export const minTouch = 48;
+export const tabBarHeight = 72;

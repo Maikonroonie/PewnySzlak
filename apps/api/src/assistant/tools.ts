@@ -44,7 +44,7 @@ function facilitySummary(f: Facility): Record<string, unknown> {
   const amen = (v: boolean | null) => (v === null ? 'brak danych' : v ? 'deklarowane: tak' : 'deklarowane: nie');
   return {
     id: f.id, name: f.name, benefit: f.benefit, address: f.address, phone: f.phone, coordinate: f.coordinate, distanceM: f.distanceM,
-    coordsValid: f.coordsValid, amenities: { ramp: amen(f.amenities.ramp), toilet: amen(f.amenities.toilet), elevator: amen(f.amenities.elevator), carPark: amen(f.amenities.carPark) },
+    coordsValid: f.coordsValid, amenities: { ramp: amen(f.amenities.ramp), toilet: amen(f.amenities.toilet), elevator: amen(f.amenities.elevator), carPark: amen(f.amenities.carPark), rest: amen(f.amenities.rest) },
     dataMonth: f.dataMonth, psozUrl: f.psozUrl, evidence: f.evidence.map(describeEvidence),
     note: 'Udogodnienia to deklaracja świadczeniodawcy – nie zostały sprawdzone w terenie.',
   };

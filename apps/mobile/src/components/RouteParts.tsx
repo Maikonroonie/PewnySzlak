@@ -37,12 +37,14 @@ export function SegmentRow({ segment, index, onPress }: { segment: RouteSegment;
         <Text style={styles.p}>{formatDistance(segment.lengthM)}</Text>
       </View>
       {summary ? <Small>{summary}</Small> : null}
-      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
-        {segment.uncertain ? <Badge text="Niepewny – sprawdź szczegóły" tone="warn" /> : <Badge text="Dane kompletne wg OSM" tone="ok" />}
-        {missing ? <Badge text={missing} tone="muted" /> : null}
-        {segment.barriers.map((b) => <Badge key={b.id} text={`${barrierTypeLabels[b.type]}: ${stateLabels[b.state].toLowerCase()}`} tone={stateTone(b.state)} />)}
-      </View>
-      {segment.warnings.map((w) => <Small key={w} style={{ color: colors.warn, marginTop: 4 }}>⚠ {w}</Small>)}
+      {segment.uncertain || missing || segment.barriers.length ? (
+        <View style={{ marginTop: 6, gap: 4 }}>
+          {segment.uncertain ? <Small style={{ color: colors.warn, fontWeight: '600' }}>Odcinek niepewny — brak pełnych danych OSM</Small> : null}
+          {missing ? <Small>{missing}</Small> : null}
+          {segment.barriers.length ? <Small>Bariery: {segment.barriers.map((b) => `${barrierTypeLabels[b.type]} (${stateLabels[b.state].toLowerCase()})`).join(' · ')}</Small> : null}
+        </View>
+      ) : null}
+      {segment.warnings.map((w, i) => <Small key={`${i}-${w}`} style={{ color: colors.warn, marginTop: 4 }}>⚠ {w}</Small>)}
     </Pressable>
   );
 }
@@ -63,21 +65,41 @@ export function InstructionRow({ step, active, index }: { step: RouteInstruction
   );
 }
 
-export function BarrierCard({ barrier, onPress }: { barrier: Barrier; onPress?: () => void }) {
+export function BarrierCard({ barrier, onPress, compact }: { barrier: Barrier; onPress?: () => void; compact?: boolean }) {
   const e = barrier.evidence[0];
   const tone = stateTone(barrier.state);
+  const conflicting = barrier.evidence.some((x) => x.status === 'conflicting') || (barrier.confirmationCount > 0 && barrier.rejectionCount > 0);
+  const stale = barrier.evidence.some((x) => x.isStale);
+  const meta = `${barrierTypeLabels[barrier.type]} · ${stateLabels[barrier.state]}`;
   return (
-    <Pressable accessibilityRole={onPress ? 'button' : undefined} accessibilityLabel={`${barrierTypeLabels[barrier.type]}: ${barrier.title}. Stan: ${stateLabels[barrier.state]}. Potwierdzeń ${barrier.confirmationCount}, zaprzeczeń ${barrier.rejectionCount}.${barrier.isDemo ? ' Dane demonstracyjne.' : ''}`} onPress={onPress} style={(st) => [focusRing(st)]}>
+    <Pressable accessibilityRole={onPress ? 'button' : undefined} accessibilityLabel={`${barrierTypeLabels[barrier.type]}: ${barrier.title}. Stan: ${stateLabels[barrier.state]}. Potwierdzeń ${barrier.confirmationCount}, zaprzeczeń ${barrier.rejectionCount}.${barrier.isDemo ? ' Dane demonstracyjne.' : ''}${conflicting ? ' Sporne informacje.' : ''}${stale ? ' Może być nieaktualne.' : ''}`} onPress={onPress} style={(st) => [focusRing(st)]}>
       <Card tone={tone === 'muted' ? undefined : tone}>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 4 }}>
-          <Badge text={stateLabels[barrier.state]} tone={stateTone(barrier.state)} />
-          <Badge text={barrierTypeLabels[barrier.type]} tone="info" />
-          {barrier.isDemo ? <Badge text="DEMO" tone="muted" /> : null}
-          {e?.isStale ? <Badge text="Może być nieaktualne" tone="warn" /> : null}
-        </View>
-        <P style={{ fontWeight: '700' }}>{barrier.title}</P>
-        {barrier.description ? <Small numberOfLines={3}>{barrier.description}</Small> : null}
-        <Small>Potwierdzeń: {barrier.confirmationCount} · zaprzeczeń: {barrier.rejectionCount} · „zniknęła”: {barrier.resolvedCount}</Small>
+        {compact ? (
+          <>
+            <P style={{ fontWeight: '700' }}>{barrier.title}</P>
+            <Small>{meta} · potw.: {barrier.confirmationCount} · zaprz.: {barrier.rejectionCount}</Small>
+            {(barrier.isDemo || conflicting || stale || e?.isStale) ? (
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6 }}>
+                {barrier.isDemo ? <Badge text="DEMO" tone="warn" /> : null}
+                {conflicting ? <Badge text="Sporne" tone="danger" /> : null}
+                {stale || e?.isStale ? <Badge text="Może być nieaktualne" tone="warn" /> : null}
+              </View>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 4 }}>
+              <Badge text={stateLabels[barrier.state]} tone={stateTone(barrier.state)} />
+              <Badge text={barrierTypeLabels[barrier.type]} tone="info" />
+              {barrier.isDemo ? <Badge text="DEMO" tone="muted" /> : null}
+              {conflicting ? <Badge text="Sporne" tone="danger" /> : null}
+              {stale || e?.isStale ? <Badge text="Może być nieaktualne" tone="warn" /> : null}
+            </View>
+            <P style={{ fontWeight: '700' }}>{barrier.title}</P>
+            {barrier.description ? <Small numberOfLines={3}>{barrier.description}</Small> : null}
+            <Small>Potwierdzeń: {barrier.confirmationCount} · zaprzeczeń: {barrier.rejectionCount} · „zniknęła”: {barrier.resolvedCount}</Small>
+          </>
+        )}
       </Card>
     </Pressable>
   );

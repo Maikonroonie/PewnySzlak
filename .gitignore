@@ -15,3 +15,4 @@ apps/mobile/android/
 apps/mobile/ios/
 !**/.env.example
 apps/mobile/public/maplibre/
+.chart-data-*/

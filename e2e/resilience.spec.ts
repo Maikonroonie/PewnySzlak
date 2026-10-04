@@ -17,15 +17,16 @@ test.describe('Odporność: odmowa GPS, offline, duży tekst, ograniczony ruch',
   test('ostatnia trasa jest dostępna offline', async ({ page, context }) => {
     await page.goto('/');
     await choosePlace(page, 'Początek trasy', 'Rynek Główny 1', /^Rynek Główny 1\b/);
+    await page.getByRole('button', { name: 'Trasa do celu' }).click();
     await choosePlace(page, 'Cel', 'Wawel', /Wawel/);
     await page.getByTestId('plan-route').click();
     await expect(page.getByTestId('screen-route')).toBeVisible({ timeout: 30_000 });
     // Offline: blokujemy API, przeładowujemy aplikację (statyczny bundle może być w cache przeglądarki, więc blokujemy tylko API).
     await context.route('**/v1/**', (r) => r.abort('internetdisconnected'));
     await page.goto('/');
-    await expect(page.getByText(/Serwer niedostępny – tryb offline/)).toBeVisible({ timeout: 20_000 });
-    await expect(page.getByText(/Zapisana trasa/)).toBeVisible();
-    await page.getByRole('button', { name: 'Otwórz trasę' }).click();
+    await expect(page.getByText('Offline').or(page.getByText(/offline/i)).first()).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByText(/Ostatnia trasa/)).toBeVisible();
+    await page.getByRole('button', { name: 'Otwórz' }).click();
     await expect(page.getByTestId('screen-route')).toBeVisible();
     await expect(page.getByText(/Odcinki trasy \(\d+\)/)).toBeVisible();
     await page.getByTestId('open-text-view').click();
@@ -36,9 +37,11 @@ test.describe('Odporność: odmowa GPS, offline, duży tekst, ograniczony ruch',
     await page.goto('/');
     // Powiększenie 200 % (odpowiednik zoomu przeglądarki / dużej czcionki systemowej)
     await page.evaluate(() => { (document.body.style as unknown as { zoom: string }).zoom = '2'; });
-    await expect(page.getByRole('heading', { name: 'Dokąd chcesz dojść?' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Poznaj Kraków według komfortu' })).toBeVisible();
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     expect(overflow).toBeLessThanOrEqual(2);
+    await expect(page.getByTestId('explore-around')).toBeVisible();
+    await page.getByRole('button', { name: 'Trasa do celu' }).click();
     await expect(page.getByTestId('plan-route')).toBeVisible();
     await expect(page.getByRole('button', { name: 'Zmień preferencje trasy' })).toBeVisible();
     await page.goto('/preferences');

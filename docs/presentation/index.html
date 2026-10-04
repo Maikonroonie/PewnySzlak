@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PewnySzlak — HackYeah 2026</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;600;700&family=IBM+Plex+Serif:ital,wght@0,500;1,500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="deck.css">
+</head>
+<body>
+<div class="deck" id="deck">
+
+<!-- 1 TITLE -->
+<section class="slide" data-n="1">
+  <div class="topbar"><span>HackYeah 2026</span><span>Kraków bez barier</span></div>
+  <div class="center">
+    <p class="brand">pewnyszlak</p>
+    <h1>Trasa, która zna<br>Twoje limity.</h1>
+  </div>
+  <div class="bottombar"><span>01 / 08</span><span>prototyp · Kraków</span></div>
+</section>
+
+<!-- 2 PROBLEM -->
+<section class="slide" data-n="2">
+  <div class="topbar"><span>Problem</span><span>02 / 08</span></div>
+  <h2>Mapy prowadzą wszystkich<br>tą samą ścieżką.</h2>
+  <div class="cols-2">
+    <div class="block">
+      <p class="num">01</p>
+      <h3>„Dostępne” nic nie znaczy</h3>
+      <p>Jedna etykieta nie mówi, czy podjazd ma 4%, czy 14%. Użytkownik potrzebuje liczb — nie marketingu.</p>
+    </div>
+    <div class="block">
+      <p class="num">02</p>
+      <h3>OSM nie zna terenu</h3>
+      <p>Sieć chodników jest. Nachylenie — prawie nigdy. Brak tagu ≠ płaski chodnik. To ślepa plama dla wózka i roweru.</p>
+    </div>
+    <div class="block">
+      <p class="num">03</p>
+      <h3>Miasto się zmienia szybciej niż mapa</h3>
+      <p>Remont, płot, nowy krawężnik. Zanim ktoś zmapuje OSM, turysta już utknął.</p>
+    </div>
+    <div class="block">
+      <p class="num">04</p>
+      <h3>Turysta nie chce zgadywać</h3>
+      <p>Chce wiedzieć wcześniej: czy ta pętla nad Wisłą jest dla niego, czy skończy się schodami.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3 SOLUTION -->
+<section class="slide" data-n="3">
+  <div class="topbar"><span>Solution</span><span>03 / 08</span></div>
+  <h2>Nie filtrujemy mapy.<br>Filtrujemy <em>ciało w przestrzeni</em>.</h2>
+  <div class="idea">
+    <div class="idea-main">
+      <p class="label">PewnySzlak = silnik komfortu</p>
+      <p class="big">Preferencje użytkownika stają się prawem fizyki trasy.</p>
+      <p class="sub">Max 6% nachylenia. Zero schodów. Krawężnik ≤ 2 cm. Dopiero potem szukamy drogi — nie odwrotnie.</p>
+    </div>
+    <div class="idea-stack">
+      <div><b>Input</b><span>limity ciała / sprzętu</span></div>
+      <div><b>Sense</b><span>satelita + LiDAR + OSM</span></div>
+      <div><b>Output</b><span>trasa, która przechodzi test</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- 4 SATELLITE + LIDAR -->
+<section class="slide slide-sense" data-n="4">
+  <div class="topbar"><span>Sensing layer</span><span>04 / 08</span></div>
+  <h2>Satelita widzi zmianę.<br>LiDAR mierzy wysokość.</h2>
+  <div class="sense-grid">
+    <article class="sense-card">
+      <header>
+        <span class="tag">SAT</span>
+        <h3>Obserwacja z orbity</h3>
+      </header>
+      <p>Ortofotomapa i zobrazowania satelitarne dają warstwę <strong>zmian w czasie</strong>: place budowy, przerwane ciągi, nowe utrudnienia.</p>
+      <ul>
+        <li>sygnał „tu warto sprawdzić”</li>
+        <li>nie zastępuje pomiaru dostępności</li>
+        <li>skaluje się na całe miasto bez patrolu</li>
+      </ul>
+      <footer>rola: detekcja anomalii · kontekst</footer>
+    </article>
+    <article class="sense-card sense-card-focus">
+      <header>
+        <span class="tag tag-focus">LiDAR</span>
+        <h3>Dokładność, której OSM nie ma</h3>
+      </header>
+      <p>Numeryczny Model Terenu GUGiK z lotniczego skaningu laserowego (ALS). Siatka wysokości → <strong>nachylenie odcinka w %</strong>.</p>
+      <ul>
+        <li>dlatego limity typu ≤ 6% mają sens</li>
+        <li>profil terenu w prototypie (WCS NMT)</li>
+        <li>osobno od tagów OSM — jawnie oznaczony</li>
+      </ul>
+      <footer>źródło: GUGiK · DTM_PL-EVRF2007-NH</footer>
+    </article>
+  </div>
+  <p class="sense-formula">sieć (OSM) + teren (LiDAR) + zmiana (satelita) → trasa pod konkretnego człowieka</p>
+</section>
+
+<!-- 5 HOW -->
+<section class="slide" data-n="5">
+  <div class="topbar"><span>Jak to działa</span><span>05 / 08</span></div>
+  <h2>Trzy warstwy. Jedna decyzja.</h2>
+  <div class="flow">
+    <div class="flow-step">
+      <span>1</span>
+      <h3>Parametryzuj</h3>
+      <p>Użytkownik ustawia limity — nie diagnozuje niepełnosprawności. Tylko fizykę trasy.</p>
+    </div>
+    <div class="flow-step">
+      <span>2</span>
+      <h3>Zmierz teren</h3>
+      <p>LiDAR / NMT wypełnia lukę nachylenia. Satelita podpowiada, gdzie mapa może być nieaktualna.</p>
+    </div>
+    <div class="flow-step">
+      <span>3</span>
+      <h3>Wyznacz i pokaż skąd</h3>
+      <p>A* na grafie Krakowa. Każdy fakt ma źródło, datę i status wiarygodności.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 6 PROOF POINTS -->
+<section class="slide" data-n="6">
+  <div class="topbar"><span>Prototyp</span><span>06 / 08</span></div>
+  <h2>Co już stoi.</h2>
+  <div class="metrics">
+    <div><b>344k</b><span>odcinków sieci pieszej OSM</span></div>
+    <div><b>NMT</b><span>profil terenu z LiDAR / GUGiK</span></div>
+    <div><b>A*</b><span>routing pod preferencje</span></div>
+    <div><b>0</b><span>fałszywych „jest dostępne”</span></div>
+  </div>
+  <div class="cols-2 tight">
+    <div class="block flat">
+      <h3>Jawna niepewność</h3>
+      <p>Brak danych = ostrzeżenie. Konflikt = widać. Awaria źródła = komunikat. Nigdy cisza udająca pewność.</p>
+    </div>
+    <div class="block flat">
+      <h3>Demo bez kłamstwa</h3>
+      <p>Rynek → Wawel, limity wózka, omijanie bariery, źródła, profil terenu — ten sam silnik, prawdziwy graf.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 7 TRUST -->
+<section class="slide" data-n="7">
+  <div class="topbar"><span>Zaufanie</span><span>07 / 08</span></div>
+  <h2>Nie sprzedajemy pewności.<br>Sprzedajemy przejrzystość.</h2>
+  <div class="trust">
+    <div><span>01</span><p>Źródło · data w źródle · pobranie · kontrola w terenie — osobno.</p></div>
+    <div><span>02</span><p>LiDAR i satelita to warstwy pomiaru, nie „pieczątka dostępności”.</p></div>
+    <div><span>03</span><p>Zgłoszenie użytkownika ≠ weryfikacja formalna.</p></div>
+    <div><span>04</span><p>Działa bez systemów wewnętrznych UMK. Skaluje się bbox-em.</p></div>
+  </div>
+</section>
+
+<!-- 8 END -->
+<section class="slide" data-n="8">
+  <div class="topbar"><span>HackYeah 2026</span><span>08 / 08</span></div>
+  <div class="center">
+    <p class="brand">pewnyszlak</p>
+    <h1>Preferencje.<br>LiDAR.<br>Pewna trasa.</h1>
+    <p class="closing">Satelita pilnuje zmian. Laser mierzy teren.<br>Ty ustawiasz limity — my znajdujemy drogę.</p>
+  </div>
+  <div class="bottombar"><span>demo · film · repo</span><span>Kraków bez barier</span></div>
+</section>
+
+</div>
+
+<div class="hud">
+  <button type="button" id="prev" aria-label="Poprzedni">←</button>
+  <span id="counter">1 / 8</span>
+  <button type="button" id="next" aria-label="Następny">→</button>
+</div>
+<script src="deck.js"></script>
+</body>
+</html>
